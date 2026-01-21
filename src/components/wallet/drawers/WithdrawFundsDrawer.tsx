@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, ArrowRight, Building2, Smartphone, Plus } from "lucide-react";
+import { X, ArrowRight, Building2, Smartphone, Plus, AlertCircle } from "lucide-react";
 import { PayoutAccount } from "@/data/wallet";
 
 interface WithdrawFundsDrawerProps {
@@ -52,12 +52,14 @@ export function WithdrawFundsDrawer({
       />
       <div
         className={`fixed z-50 bg-white shadow-2xl transform transition-transform duration-300 ease-out flex flex-col max-sm:bottom-0 max-sm:left-0 max-sm:w-full max-sm:h-[92vh] max-sm:rounded-t-[32px] sm:right-0 sm:top-0 sm:h-full sm:w-full sm:max-w-[560px] sm:rounded-l-[32px] overflow-hidden ${
-          isOpen ? "translate-y-0 sm:translate-x-0" : "translate-y-full sm:translate-x-full"
+          isOpen 
+            ? "max-sm:translate-y-0 sm:translate-x-0" 
+            : "max-sm:translate-y-full sm:translate-x-full"
         }`}
       >
         <form onSubmit={handleSubmit} className="flex flex-col h-full">
           {/* Header */}
-          <div className="px-8 py-6 flex items-start justify-between flex-shrink-0">
+          <div className="px-8 py-6 flex items-start justify-between flex-shrink-0 border-b border-zinc-200 mb-3">
             <div>
               <h2 className="font-unbounded text-2xl font-bold text-secondary-000 mb-1">
                 Withdraw Funds
@@ -88,8 +90,18 @@ export function WithdrawFundsDrawer({
                 <input
                   type="number"
                   required
+                  min="0.01"
+                  step="0.01"
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "" || parseFloat(val) >= 0) {
+                      setAmount(val);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "-" || e.key === "e") e.preventDefault();
+                  }}
                   placeholder="0.00"
                   max={availableBalance}
                   className="w-full pl-10 pr-24 py-5 bg-zinc-50 border-2 border-zinc-100 rounded-2xl font-unbounded text-2xl font-bold text-secondary-000 outline-none focus:border-primary-100 focus:bg-white transition-all"
@@ -110,8 +122,8 @@ export function WithdrawFundsDrawer({
             {/* Payout Account Section */}
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <label className="block font-unageo text-sm font-bold text-zinc-400 uppercase tracking-widest">
-                  Withdraw to
+                <label className="block font-unageo text-sm font-bold text-secondary-000 uppercase tracking-widest">
+                Payout Account
                 </label>
                 <button
                   type="button"
@@ -180,14 +192,16 @@ export function WithdrawFundsDrawer({
               </div>
             </div>
 
-            {/* Hint Box */}
-            <div className="p-5 bg-secondary-700 rounded-2xl border border-secondary-600 flex gap-4">
-              <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0 border border-zinc-100">
-                <ArrowRight className="w-4 h-4 text-zinc-400" />
+            {/* Processing Time Hint Box */}
+            <div className="p-6 bg-[#E8F1FF] rounded-[24px] border border-[#B8D4FF] flex gap-5 items-start">
+              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shrink-0 border border-[#B8D4FF] shadow-sm">
+                <AlertCircle className="w-6 h-6 text-[#2B6CB0]" />
               </div>
-              <div>
-                <p className="font-unageo text-xs font-semibold text-secondary-000">Estimated Arrival</p>
-                <p className="font-unageo text-xs text-accent-80 mt-0.5">Funds will arrive in 2-5 business days after processing.</p>
+              <div className="space-y-1">
+                <p className="font-unageo text-[16px] font-bold text-[#2B6CB0]">Processing Time</p>
+                <p className="font-unageo text-[14px] text-[#4A5568] leading-relaxed">
+                  Withdrawals typically process within 2-5 business days. You&apos;ll receive a confirmation email once the transfer is complete.
+                </p>
               </div>
             </div>
           </div>

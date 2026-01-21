@@ -182,10 +182,10 @@ export function TransactionHistory({
           Object.entries(groupedTransactions).map(([date, dateTransactions]) => (
             <div key={date}>
               <div className="flex items-center gap-4 mb-4">
-                <span className="font-unageo text-xs font-bold text-zinc-400 uppercase tracking-widest whitespace-nowrap">
+                <span className="font-unageo text-xs font-bold text-secondary-000 uppercase tracking-widest whitespace-nowrap">
                   {date}
                 </span>
-                <div className="h-[1px] w-full bg-zinc-100" />
+                <div className="h-[1px] w-full bg-secondary-600" />
               </div>
               <div className="grid gap-3">
                 {dateTransactions.map((tx) => (

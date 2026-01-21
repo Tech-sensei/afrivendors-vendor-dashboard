@@ -94,11 +94,13 @@ export function TransactionDetailsDrawer({
       />
       <div
         className={`fixed z-50 bg-white shadow-2xl transform transition-transform duration-300 ease-out flex flex-col max-sm:bottom-0 max-sm:left-0 max-sm:w-full max-sm:h-[92vh] max-sm:rounded-t-[32px] sm:right-0 sm:top-0 sm:h-full sm:w-full sm:max-w-[560px] sm:rounded-l-[32px] overflow-hidden ${
-          isOpen ? "translate-x-0" : "translate-x-full"
+          isOpen 
+            ? "max-sm:translate-y-0 sm:translate-x-0" 
+            : "max-sm:translate-y-full sm:translate-x-full"
         }`}
       >
         {/* Header */}
-        <div className="px-8 py-6 flex items-start justify-between flex-shrink-0">
+        <div className="px-8 py-6 flex items-start justify-between flex-shrink-0 border-b border-zinc-200 mb-3">
           <div>
             <h2 className="font-unbounded text-2xl font-bold text-secondary-000 mb-1">
               Transaction Details

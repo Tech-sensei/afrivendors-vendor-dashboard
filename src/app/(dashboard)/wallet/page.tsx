@@ -16,13 +16,10 @@ import { WalletHeader } from "@/components/wallet/WalletHeader";
 import { BalanceCards } from "@/components/wallet/BalanceCards";
 import { TransactionHistory } from "@/components/wallet/TransactionHistory";
 
-// Drawers
+import { PayoutAccountsDrawer } from "@/components/wallet/drawers/PayoutAccountsDrawer";
+import { AddEditPayoutDrawer } from "@/components/wallet/drawers/AddEditPayoutDrawer";
 import { TransactionDetailsDrawer } from "@/components/wallet/drawers/TransactionDetailsDrawer";
 import { WithdrawFundsDrawer } from "@/components/wallet/drawers/WithdrawFundsDrawer";
-import { PayoutAccountsDrawer } from "@/components/wallet/drawers/PayoutAccountsDrawer";
-import { PayoutAccountDetailsDrawer } from "@/components/wallet/drawers/PayoutAccountDetailsDrawer";
-import { AddEditPayoutDrawer } from "@/components/wallet/drawers/AddEditPayoutDrawer";
-import { DeletePayoutDrawer } from "@/components/wallet/drawers/DeletePayoutDrawer";
 
 export default function WalletPage() {
   const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
@@ -33,9 +30,7 @@ export default function WalletPage() {
   const [isTransactionDetailsOpen, setIsTransactionDetailsOpen] = useState(false);
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
   const [isPayoutAccountsOpen, setIsPayoutAccountsOpen] = useState(false);
-  const [isPayoutDetailsOpen, setIsPayoutDetailsOpen] = useState(false);
   const [isAddEditPayoutOpen, setIsAddEditPayoutOpen] = useState(false);
-  const [isDeletePayoutOpen, setIsDeletePayoutOpen] = useState(false);
 
   // Date filter state
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'>('all');
@@ -215,42 +210,16 @@ export default function WalletPage() {
         isOpen={isPayoutAccountsOpen}
         onClose={() => setIsPayoutAccountsOpen(false)}
         accounts={payoutAccounts}
-        onViewAccount={(id) => {
-          setSelectedPayoutAccount(payoutAccounts.find(a => a.id === id) || null);
-          setIsPayoutDetailsOpen(true);
-          setIsPayoutAccountsOpen(false);
-        }}
         onAddAccount={() => {
           setSelectedPayoutAccount(null);
           setIsAddEditPayoutOpen(true);
         }}
       />
 
-      <PayoutAccountDetailsDrawer
-        isOpen={isPayoutDetailsOpen}
-        onClose={() => setIsPayoutDetailsOpen(false)}
-        account={selectedPayoutAccount}
-        onEdit={() => setIsAddEditPayoutOpen(true)}
-        onDelete={() => setIsDeletePayoutOpen(true)} onSetDefault={function (id: string): void {
-          throw new Error("Function not implemented.");
-        } }      />
-
       <AddEditPayoutDrawer
         isOpen={isAddEditPayoutOpen}
         onClose={() => setIsAddEditPayoutOpen(false)}
-        account={selectedPayoutAccount}
         onSave={handleSavePayoutAccount}
-      />
-
-      <DeletePayoutDrawer
-        isOpen={isDeletePayoutOpen}
-        onClose={() => setIsDeletePayoutOpen(false)}
-        account={selectedPayoutAccount}
-        onConfirm={(id) => {
-          setPayoutAccounts(prev => prev.filter(a => a.id !== id));
-          setIsDeletePayoutOpen(false);
-          toast.success("Account removed.");
-        }}
       />
     </div>
   );
