@@ -44,7 +44,7 @@ export function ReviewStats({ reviews }: ReviewStatsProps) {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-6">
       {/* Average Rating Card */}
       <div className="bg-white border border-zinc-200 rounded-[32px] p-10 flex flex-col items-center justify-center text-center shadow-sm hover:shadow-md transition-shadow">
         <div className="text-zinc-400 font-unageo text-sm font-bold uppercase tracking-widest mb-4">

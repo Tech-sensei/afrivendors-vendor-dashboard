@@ -1,74 +1,81 @@
-import React from 'react';
+"use client";
 
-export default function Page() {
+import React, { useState } from 'react';
+import { 
+  statsBreakdown, 
+  earningsData, 
+  upcomingAppointments, 
+  recentMessages,
+  StatsBreakdown
+} from '@/data/dashboard';
+import { DashboardStats } from '@/components/dashboard/DashboardStats';
+import { EarningsChart } from '@/components/dashboard/EarningsChart';
+import { UpcomingAppointments } from '@/components/dashboard/UpcomingAppointments';
+import { RecentMessages } from '@/components/dashboard/RecentMessages';
+import { DashboardWalletCard } from '@/components/dashboard/DashboardWalletCard';
+import { BusinessRatingCard } from '@/components/dashboard/BusinessRatingCard';
+
+export default function DashboardPage() {
+  const [timeFilter, setTimeFilter] = useState<keyof StatsBreakdown>('weekly');
+
   return (
-    <div className="space-y-6">
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white border border-accent-20 rounded-lg p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-accent-60 mb-1">Total Revenue</p>
-              <p className="font-unbounded text-2xl font-semibold text-secondary-000">₦0.00</p>
-            </div>
-            <div className="w-12 h-12 bg-primary-300 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-primary-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
+      <div className="max-w-[1440px] mx-auto">
+        {/* Header Area with Filter */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-12">
+          <div>
+            <h1 className="font-unbounded text-3xl md:text-4xl font-bold text-secondary-000 tracking-tight mb-2">
+             Welcome back, Zuri!
+            </h1>
+            <p className="font-unageo text-zinc-500 text-base md:text-lg">
+              Here&apos;s a quick snapshot of your business performance today.
+            </p>
+          </div>
+
+          {/* Time Filter Controls */}
+          <div className="flex bg-white p-1 rounded-xl border border-zinc-200/60 shadow-sm w-full md:w-auto">
+            {(['daily', 'weekly', 'monthly'] as const).map((filter) => (
+              <button
+                key={filter}
+                onClick={() => setTimeFilter(filter)}
+                className={`flex-1 md:flex-none px-6 md:px-8 py-2.5 rounded-lg font-unageo text-sm font-bold capitalize transition-all duration-300 ${
+                  timeFilter === filter 
+                    ? "bg-[#140C06] text-white shadow-lg shadow-zinc-200/50" 
+                    : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50"
+                }`}
+              >
+                {filter}
+              </button>
+            ))}
           </div>
         </div>
 
-        <div className="bg-white border border-accent-20 rounded-lg p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-accent-60 mb-1">Total Orders</p>
-              <p className="font-unbounded text-2xl font-semibold text-secondary-000">0</p>
-            </div>
-            <div className="w-12 h-12 bg-secondary-600 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-secondary-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-              </svg>
-            </div>
-          </div>
+        {/* Primary Metrics Grid */}
+        <DashboardStats stats={statsBreakdown[timeFilter]} />
+
+        {/* Wallet Card - Shows right after stats on mobile */}
+        <div className="lg:hidden mb-8">
+          <DashboardWalletCard />
         </div>
 
-        <div className="bg-white border border-accent-20 rounded-lg p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-accent-60 mb-1">Total Products</p>
-              <p className="font-unbounded text-2xl font-semibold text-secondary-000">0</p>
-            </div>
-            <div className="w-12 h-12 bg-secondary-600 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-secondary-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-              </svg>
-            </div>
+        {/* Main Dashboard Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          {/* Large Content Column (2/3) */}
+          <div className="lg:col-span-2 flex flex-col gap-8">
+            <EarningsChart data={earningsData} />
+            <UpcomingAppointments appointments={upcomingAppointments} />
           </div>
-        </div>
 
-        <div className="bg-white border border-accent-20 rounded-lg p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-accent-60 mb-1">Active Customers</p>
-              <p className="font-unbounded text-2xl font-semibold text-secondary-000">0</p>
+          {/* Actionable Sidebar (1/3) */}
+          <div className="flex flex-col gap-8">
+            {/* Wallet Card - Shows in sidebar on desktop */}
+            <div className="hidden lg:block">
+              <DashboardWalletCard />
             </div>
-            <div className="w-12 h-12 bg-secondary-600 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-secondary-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-            </div>
+            <BusinessRatingCard />
+            <RecentMessages messages={recentMessages} />
           </div>
         </div>
       </div>
-
-      {/* Recent Activity */}
-      <div className="bg-white border border-accent-20 rounded-lg p-6">
-        <h3 className="font-unbounded font-semibold text-secondary-000 text-lg mb-4">Recent Activity</h3>
-        <div className="text-center py-12">
-          <p className="text-accent-60">No recent activity to display</p>
-        </div>
-      </div>
-    </div>
+  
   );
 }

@@ -84,7 +84,7 @@ export default function ReviewsPage() {
       <ReviewStats reviews={reviews} />
 
       {/* Controls Area (Search & Sort) */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 mt-12 bg-zinc-50/50 p-6 rounded-[32px] border border-zinc-100/80">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6 bg-zinc-50/50 p-6 rounded-[32px] border border-zinc-100/80">
         <div className="flex items-center gap-4 flex-1">
           {/* Search Bar */}
           <div className="relative group flex-1 max-w-md">
