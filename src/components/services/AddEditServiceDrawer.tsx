@@ -102,7 +102,7 @@ export function AddEditServiceDrawer({ isOpen, onClose, service, onSave }: AddEd
     <>
       {/* Overlay */}
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-[2px] z-50 transition-opacity duration-300 h-full"
+        className="fixed inset-0 bg-[#231305]/40 backdrop-blur-[2px] z-50 transition-opacity duration-300 h-full"
         onClick={onClose}
       />
 

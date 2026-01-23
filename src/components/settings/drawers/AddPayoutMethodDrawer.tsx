@@ -28,7 +28,7 @@ export function AddPayoutMethodDrawer({
     <>
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-black/40 z-[100] backdrop-blur-[2px] animate-in fade-in duration-300"
+        className="fixed inset-0 bg-[#231305]/40 backdrop-blur-[2px] z-[100] animate-in fade-in duration-300"
       />
       <div className="fixed right-0 top-0 bottom-0 w-full lg:max-w-[560px] bg-white z-[101] shadow-2xl flex flex-col animate-in duration-500 ease-out sm:slide-in-from-right max-sm:slide-in-from-bottom sm:rounded-l-[32px] max-sm:rounded-t-[32px] sm:h-full max-sm:h-[92dvh] max-sm:top-auto sm:bottom-0">
         <div className="p-6 border-b border-zinc-100 flex items-center justify-between">
