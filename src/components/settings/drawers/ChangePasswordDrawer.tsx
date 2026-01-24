@@ -27,7 +27,7 @@ export function ChangePasswordDrawer({
         onClick={onClose}
         className="fixed inset-0 bg-[#231305]/40 backdrop-blur-[2px] z-[100] animate-in fade-in duration-300"
       />
-      <div className="fixed right-0 top-0 bottom-0 w-full lg:max-w-[560px] bg-white z-[101] shadow-2xl flex flex-col animate-in duration-500 ease-out sm:slide-in-from-right max-sm:slide-in-from-bottom sm:rounded-l-[32px] max-sm:rounded-t-[32px] sm:h-full max-sm:h-[92dvh] max-sm:top-auto sm:bottom-0">
+      <div className="fixed right-0 top-0 bottom-0 w-full lg:max-w-[560px] bg-white z-[101] shadow-2xl flex flex-col animate-in duration-500 ease-out sm:slide-in-from-right max-sm:slide-in-from-bottom sm:rounded-l-[32px] max-sm:rounded-t-[32px] sm:h-full max-sm:h-[92dvh] max-sm:top-auto sm:bottom-0 max-sm:left-4 max-sm:right-4">
         <div className="p-6 border-b border-zinc-100 flex items-center justify-between">
           <h3 className="font-unbounded text-xl font-semibold text-zinc-900">
             Change Password
@@ -125,10 +125,10 @@ export function ChangePasswordDrawer({
           </div>
         </div>
 
-        <div className="p-6 border-t border-zinc-100 flex gap-3 justify-end">
+        <div className="p-6 border-t border-zinc-100 bg-secondary-800 flex gap-3 justify-end">
           <button
             onClick={onClose}
-            className="px-6 py-3 rounded-xl border border-zinc-200 text-sm font-semibold text-secondary-000 hover:bg-zinc-50 transition-all active:scale-95 cursor-pointer"
+            className="px-6 py-3 rounded-xl bg-white border border-accent-20 text-sm font-semibold text-secondary-000 hover:bg-secondary-700 hover:border-accent-40 transition-all active:scale-95 cursor-pointer shadow-sm"
           >
             Cancel
           </button>

@@ -20,7 +20,7 @@ export function DeleteServiceDrawer({ isOpen, onClose, service, onConfirm }: Del
       />
 
       {/* Drawer */}
-      <div className={`fixed z-50 bg-white shadow-2xl transform transition-transform duration-300 ease-out flex flex-col max-sm:bottom-0 max-sm:left-0 max-sm:w-full max-sm:h-[92vh] max-sm:rounded-t-[32px] max-sm:translate-y-0 sm:right-0 sm:top-0 sm:h-full sm:w-full sm:max-w-[560px] sm:rounded-l-[32px] sm:translate-x-0 overflow-hidden`}>
+      <div className={`fixed z-50 bg-white shadow-2xl transform transition-transform duration-300 ease-out flex flex-col max-sm:bottom-0 max-sm:left-4 max-sm:right-4 max-sm:h-[92vh] max-sm:rounded-t-[32px] max-sm:translate-y-0 sm:right-0 sm:top-0 sm:h-full sm:w-full sm:max-w-[560px] sm:rounded-l-[32px] sm:translate-x-0 overflow-hidden`}>
         
         {/* Header */}
         <div className="px-8 py-6 flex items-start justify-between border-b border-secondary-600/30 flex-shrink-0">
@@ -119,10 +119,10 @@ export function DeleteServiceDrawer({ isOpen, onClose, service, onConfirm }: Del
         </div>
 
         {/* Footer Actions */}
-        <div className="sticky bottom-0 bg-white border-t border-secondary-600 px-8 py-6 flex gap-4 flex-shrink-0">
+        <div className="sticky bottom-0 bg-secondary-800 border-t border-secondary-600 px-8 py-6 flex gap-4 flex-shrink-0">
           <button
             onClick={onClose}
-            className="flex-1 py-4 px-6 border border-secondary-600 text-secondary-000 font-unageo text-[15px] font-bold rounded-xl transition-all duration-200 hover:bg-secondary-700 hover:border-secondary-100 cursor-pointer text-center"
+            className="flex-1 py-4 px-6 bg-white border border-accent-20 text-secondary-000 font-unageo text-[15px] font-bold rounded-xl transition-all duration-200 hover:bg-secondary-700 hover:border-accent-40 cursor-pointer text-center shadow-sm"
           >
             Cancel
           </button>

@@ -80,7 +80,7 @@ export function SendQuoteDrawer({
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
             className={`fixed ${
               isMobile 
-                ? 'bottom-0 left-0 right-0 h-[90vh] max-h-[90vh] rounded-t-2xl' 
+                ? 'bottom-0 left-4 right-4 h-[90vh] max-h-[90vh] rounded-t-2xl' 
                 : 'top-0 right-0 bottom-0 w-[90%] max-w-[600px] rounded-tl-2xl rounded-bl-2xl'
             } bg-white shadow-[-4px_0_24px_rgba(0,0,0,0.12)] z-[1000] flex flex-col overflow-hidden`}
           >
@@ -219,7 +219,7 @@ export function SendQuoteDrawer({
             </div>
 
             {/* Footer Actions */}
-            <div className="p-6 border-t border-accent-20 bg-white flex gap-3">
+            <div className="p-6 border-t border-accent-20 bg-secondary-800 flex gap-3">
               <button
                 onClick={onClose}
                 className="flex-1 px-6 py-3.5 rounded-[10px] bg-transparent border border-accent-20 cursor-pointer font-unageo text-[15px] font-semibold text-accent-70 transition-all hover:bg-secondary-800"

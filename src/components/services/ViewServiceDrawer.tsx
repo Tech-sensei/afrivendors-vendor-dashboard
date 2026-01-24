@@ -27,7 +27,7 @@ export function ViewServiceDrawer({ isOpen, onClose, service, onEdit }: ViewServ
       />
 
       {/* Drawer */}
-      <div className={`fixed z-50 bg-white shadow-2xl transform transition-transform duration-300 ease-out flex flex-col max-sm:bottom-0 max-sm:left-0 max-sm:w-full max-sm:h-[92vh] max-sm:rounded-t-[32px] max-sm:translate-y-0 sm:right-0 sm:top-0 sm:h-full sm:w-full sm:max-w-[560px] sm:rounded-l-[32px] sm:translate-x-0 overflow-hidden`}>
+      <div className={`fixed z-50 bg-white shadow-2xl transform transition-transform duration-300 ease-out flex flex-col max-sm:bottom-0 max-sm:left-4 max-sm:right-4 max-sm:h-[92vh] max-sm:rounded-t-[32px] max-sm:translate-y-0 sm:right-0 sm:top-0 sm:h-full sm:w-full sm:max-w-[560px] sm:rounded-l-[32px] sm:translate-x-0 overflow-hidden`}>
         
         {/* Header */}
         <div className="px-8 py-6 flex items-start justify-between flex-shrink-0">
@@ -143,7 +143,7 @@ export function ViewServiceDrawer({ isOpen, onClose, service, onEdit }: ViewServ
         </div>
 
         {/* Footer Actions */}
-        <div className="sticky bottom-0 bg-white border-t border-secondary-600 px-8 py-6 flex flex-col sm:flex-row gap-4 flex-shrink-0">
+        <div className="sticky bottom-0 bg-secondary-800 border-t border-secondary-600 px-8 py-6 flex flex-col sm:flex-row gap-4 flex-shrink-0">
           <button
             onClick={onEdit}
             className="flex-1 py-4 px-6 bg-primary-100 text-white font-unageo text-[15px] font-bold rounded-xl flex items-center justify-center gap-2 transition-all duration-300 hover:brightness-105 hover:-translate-y-1 shadow-lg shadow-primary-100/20 active:scale-95 cursor-pointer"

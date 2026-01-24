@@ -51,7 +51,7 @@ export function WithdrawFundsDrawer({
         onClick={onClose}
       />
       <div
-        className={`fixed z-50 bg-white shadow-2xl transform transition-transform duration-300 ease-out flex flex-col max-sm:bottom-0 max-sm:left-0 max-sm:w-full max-sm:h-[92vh] max-sm:rounded-t-[32px] sm:right-0 sm:top-0 sm:h-full sm:w-full sm:max-w-[560px] sm:rounded-l-[32px] overflow-hidden ${
+        className={`fixed z-50 bg-white shadow-2xl transform transition-transform duration-300 ease-out flex flex-col max-sm:bottom-0 max-sm:left-4 max-sm:right-4 max-sm:h-[92vh] max-sm:rounded-t-[32px] sm:right-0 sm:top-0 sm:h-full sm:w-full sm:max-w-[560px] sm:rounded-l-[32px] overflow-hidden ${
           isOpen 
             ? "max-sm:translate-y-0 sm:translate-x-0" 
             : "max-sm:translate-y-full sm:translate-x-full"
@@ -207,18 +207,18 @@ export function WithdrawFundsDrawer({
           </div>
 
           {/* Footer Actions */}
-          <div className="sticky bottom-0 bg-white border-t border-secondary-600 px-8 py-6 flex gap-4 mt-auto">
+          <div className="sticky bottom-0 bg-secondary-800 border-t border-secondary-600 px-8 py-6 flex gap-4 mt-auto">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-4 px-6 border border-secondary-600 text-secondary-000 font-unageo text-[15px] font-bold rounded-xl transition-all duration-200 hover:bg-secondary-700 hover:border-secondary-100 cursor-pointer text-center"
+              className="flex-1 py-4 px-6 bg-white border border-accent-20 text-secondary-000 font-unageo text-[15px] font-bold rounded-xl transition-all duration-200 hover:bg-secondary-700 hover:border-accent-40 cursor-pointer text-center shadow-sm"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={!amount || !selectedAccountId || parseFloat(amount) <= 0 || parseFloat(amount) > parseFloat(availableBalance)}
-              className={`flex-[1.5] py-4 px-6 font-unageo text-[15px] font-bold rounded-xl flex items-center justify-center gap-2 transition-all duration-300 ${(!amount || !selectedAccountId || parseFloat(amount) <= 0 || parseFloat(amount) > parseFloat(availableBalance)) ? 'bg-secondary-700 text-accent-60 border border-secondary-600 cursor-not-allowed' : 'bg-primary-100 text-white hover:brightness-105 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary-100/20 cursor-pointer'} group active:translate-y-0 active:scale-95`}
+              className={`flex-[1.5] py-4 px-6 font-unageo text-[15px] font-bold rounded-xl flex items-center justify-center gap-2 transition-all duration-300 shadow-sm ${(!amount || !selectedAccountId || parseFloat(amount) <= 0 || parseFloat(amount) > parseFloat(availableBalance)) ? 'bg-accent-20 text-accent-60 border border-accent-20 cursor-not-allowed' : 'bg-primary-100 text-white hover:bg-primary-100/90 hover:shadow-lg hover:shadow-primary-100/20 cursor-pointer'} active:scale-95`}
             >
               Confirm Withdrawal
             </button>

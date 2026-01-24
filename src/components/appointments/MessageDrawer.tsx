@@ -106,7 +106,7 @@ export function MessageDrawer({ isOpen, onClose, appointment }: MessageDrawerPro
             exit={isMobile ? { y: '100%' } : { x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
             className={`fixed ${isMobile
-                ? 'bottom-0 left-0 right-0 h-[90vh] max-h-[90vh] rounded-t-2xl'
+                ? 'bottom-0 left-4 right-4 h-[90vh] max-h-[90vh] rounded-t-2xl'
                 : 'top-0 right-0 bottom-0 w-full sm:w-120 rounded-tl-2xl rounded-bl-2xl'
               } bg-white shadow-[-4px_0_24px_rgba(0,0,0,0.12)] z-1000 flex flex-col overflow-hidden`}
           >

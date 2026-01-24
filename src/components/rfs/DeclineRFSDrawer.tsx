@@ -39,7 +39,7 @@ export function DeclineRFSDrawer({
             animate={isMobile ? { y: 0 } : { x: 0 }}
             exit={isMobile ? { y: '100%' } : { x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className={`fixed ${isMobile ? 'bottom-0 left-0 right-0 h-[90vh] rounded-t-3xl' : 'top-0 right-0 bottom-0 w-[90%] max-w-[500px] rounded-l-2xl'} bg-white shadow-2xl z-[1000] flex flex-col overflow-hidden`}
+            className={`fixed ${isMobile ? 'bottom-0 left-4 right-4 h-[90vh] max-h-[90vh] rounded-t-3xl' : 'top-0 right-0 bottom-0 w-[90%] max-w-[500px] rounded-l-2xl'} bg-white shadow-2xl z-[1000] flex flex-col overflow-hidden`}
           >
             {/* Header */}
             <div className="p-6 border-b border-accent-10/50 bg-white flex items-start justify-between">
@@ -128,7 +128,7 @@ export function DeclineRFSDrawer({
             </div>
 
             {/* Footer Actions */}
-            <div className="p-6 border-t border-accent-10/50 bg-white grid grid-cols-2 gap-3">
+            <div className="p-6 border-t border-accent-10/50 bg-secondary-800 grid grid-cols-2 gap-3">
               <button 
                 onClick={onClose}
                 className="flex items-center justify-center gap-2 py-4 bg-white border border-accent-20 hover:bg-accent-10 text-secondary-000 rounded-xl font-unbounded text-[10px] font-bold uppercase tracking-widest transition-all active:scale-95 shadow-sm"

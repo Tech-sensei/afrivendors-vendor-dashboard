@@ -51,7 +51,7 @@ export function AddEditPayoutDrawer({
         onClick={onClose}
       />
       <div
-        className={`fixed z-50 bg-white shadow-2xl transform transition-transform duration-300 ease-out flex flex-col max-sm:bottom-0 max-sm:left-0 max-sm:w-full max-sm:h-[92vh] max-sm:rounded-t-[32px] sm:right-0 sm:top-0 sm:h-full sm:w-full sm:max-w-[560px] sm:rounded-l-[32px] overflow-hidden ${
+        className={`fixed z-50 bg-white shadow-2xl transform transition-transform duration-300 ease-out flex flex-col max-sm:bottom-0 max-sm:left-4 max-sm:right-4 max-sm:h-[92vh] max-sm:rounded-t-[32px] sm:right-0 sm:top-0 sm:h-full sm:w-full sm:max-w-[560px] sm:rounded-l-[32px] overflow-hidden ${
           isOpen 
             ? "max-sm:translate-y-0 sm:translate-x-0" 
             : "max-sm:translate-y-full sm:translate-x-full"
@@ -187,11 +187,11 @@ export function AddEditPayoutDrawer({
           </div>
 
           {/* Footer Actions */}
-          <div className="sticky bottom-0 bg-white border-t border-zinc-100 px-8 py-6 flex gap-4 mt-auto">
+          <div className="sticky bottom-0 bg-secondary-800 border-t border-zinc-100 px-8 py-6 flex gap-4 mt-auto">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-4 px-6 border border-zinc-200 text-secondary-000 font-unageo text-[16px] font-bold rounded-2xl transition-all duration-200 hover:bg-zinc-50 cursor-pointer text-center"
+              className="flex-1 py-4 px-6 bg-white border border-accent-20 text-secondary-000 font-unageo text-[16px] font-bold rounded-2xl transition-all duration-200 hover:bg-secondary-700 hover:border-accent-40 cursor-pointer text-center shadow-sm"
             >
               Cancel
             </button>
