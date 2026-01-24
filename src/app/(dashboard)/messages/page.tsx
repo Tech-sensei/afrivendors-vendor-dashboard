@@ -163,14 +163,18 @@ export default function VendorMessages() {
       conv.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
     )
     .sort((a, b) => {
-      if (sortBy === 'pinned') {
-        if (a.isPinned && !b.isPinned) return -1;
-        if (!a.isPinned && b.isPinned) return 1;
+      // Primary sort: Pinned status (Always on top)
+      if (a.isPinned !== b.isPinned) {
+        return a.isPinned ? -1 : 1;
       }
+      
+      // Secondary sort: Active tab criteria
       if (sortBy === 'unread') {
         return b.unreadCount - a.unreadCount;
       }
-      return 0; // Keep original order (recent first from mock sort)
+      
+      // Default / Recent: Keep original order (assuming mock data is time-sorted)
+      return 0;
     });
 
   return (
