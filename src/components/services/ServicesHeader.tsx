@@ -10,7 +10,7 @@ export function ServicesHeader({ onAddService }: ServicesHeaderProps) {
   return (
     <div className="flex items-start justify-between mb-2 flex-wrap gap-4">
       <div>
-        <h1 className="font-unbounded text-4xl font-bold text-secondary-000 mb-2 leading-tight">
+        <h1 className="font-unbounded text-3xl font-bold text-secondary-000 mb-2 leading-tight">
           Services Management
         </h1>
         <p className="font-unageo text-[17px] text-accent-80">

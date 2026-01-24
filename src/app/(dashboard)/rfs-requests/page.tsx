@@ -155,10 +155,10 @@ export default function VendorRFSRequests() {
   };
 
   return (
-    <div className="max-w-[1440px] mx-auto ">
+    <div className="max-w-360 mx-auto">
       {/* Header Area */}
       <div className="mb-12">
-        <h1 className="font-unbounded text-4xl font-black text-secondary-000 tracking-tight mb-2">
+        <h1 className="font-unbounded text-3xl font-black text-secondary-000 tracking-tight mb-2">
           Service Requests
         </h1>
         <p className="font-unageo text-accent-60 text-lg">

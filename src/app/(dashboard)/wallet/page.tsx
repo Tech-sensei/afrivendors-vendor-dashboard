@@ -150,7 +150,7 @@ export default function WalletPage() {
 
   return (
     <div className="">
-      {/* <WalletHeader /> */}
+      <WalletHeader />
       
       <BalanceCards 
         availableBalance={availableBalance}

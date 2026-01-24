@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { LogoutConfirmModal } from './LogoutConfirmModal';
@@ -18,6 +19,7 @@ export default function DashboardLayout({
   headerTitle,
   headerDescription,
 }: DashboardLayoutProps) {
+  const router = useRouter();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -25,6 +27,8 @@ export default function DashboardLayout({
     // Handle logout logic here
     console.log('Logging out...');
     setShowLogoutModal(false);
+    // Redirect to sign-in page
+    router.push('/sign-in');
   };
 
   return (

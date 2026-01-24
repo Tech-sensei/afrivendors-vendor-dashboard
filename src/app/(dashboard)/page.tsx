@@ -19,11 +19,11 @@ export default function DashboardPage() {
   const [timeFilter, setTimeFilter] = useState<keyof StatsBreakdown>('weekly');
 
   return (
-      <div className="max-w-[1440px] mx-auto">
+      <div className="max-w-360 mx-auto">
         {/* Header Area with Filter */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-12">
           <div>
-            <h1 className="font-unbounded text-3xl md:text-4xl font-bold text-secondary-000 tracking-tight mb-2">
+            <h1 className="font-unbounded text-3xl md:text-3xl font-bold text-secondary-000 tracking-tight mb-2">
              Welcome back, Zuri!
             </h1>
             <p className="font-unageo text-zinc-500 text-base md:text-lg">

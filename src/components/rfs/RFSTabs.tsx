@@ -42,7 +42,7 @@ export function RFSTabs({ activeTab, setActiveTab, counts }: RFSTabsProps) {
           >
             <Icon size={18} className={isActive ? "text-primary-100" : "text-accent-40 group-hover:text-accent-60"} />
             <span className="font-unageo text-sm font-bold">{tab.label}</span>
-            <span className={`flex items-center justify-center min-w-[24px] h-6 px-2 rounded-full font-unageo text-[10px] font-bold transition-colors ${
+            <span className={`flex items-center justify-center min-w-6 h-6 px-2 rounded-full font-unageo text-[10px] font-bold transition-colors ${
               isActive 
                 ? "bg-primary-100 text-white shadow-lg shadow-primary-100/20" 
                 : "bg-accent-10 text-accent-60 group-hover:bg-accent-20"
