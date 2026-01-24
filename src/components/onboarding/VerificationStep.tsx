@@ -28,10 +28,6 @@ export function VerificationStep({ formData, updateFormData }: VerificationStepP
         updateFormData({ [field]: file });
     };
 
-    const handleFileClick = (ref: React.RefObject<HTMLInputElement>) => {
-        ref.current?.click();
-    };
-
     const removeFile = (field: string) => {
         updateFormData({ [field]: null });
     };
@@ -64,7 +60,7 @@ export function VerificationStep({ formData, updateFormData }: VerificationStepP
                     {!formData.businessLicense ? (
                         <button
                             type="button"
-                            onClick={() => handleFileClick(businessLicenseRef)}
+                            onClick={() => businessLicenseRef.current?.click()}
                             className="h-32 border-2 border-dashed border-accent-20 rounded-lg flex flex-col items-center justify-center gap-2 hover:border-primary-100 hover:bg-secondary-600 transition-all"
                         >
                             <Upload className="w-8 h-8 text-accent-60" />
@@ -111,7 +107,7 @@ export function VerificationStep({ formData, updateFormData }: VerificationStepP
                     {!formData.insurance ? (
                         <button
                             type="button"
-                            onClick={() => handleFileClick(insuranceRef)}
+                            onClick={() => insuranceRef.current?.click()}
                             className="h-32 border-2 border-dashed border-accent-20 rounded-lg flex flex-col items-center justify-center gap-2 hover:border-primary-100 hover:bg-secondary-600 transition-all"
                         >
                             <Upload className="w-8 h-8 text-accent-60" />
@@ -158,7 +154,7 @@ export function VerificationStep({ formData, updateFormData }: VerificationStepP
                     {!formData.idDocument ? (
                         <button
                             type="button"
-                            onClick={() => handleFileClick(idDocumentRef)}
+                            onClick={() => idDocumentRef.current?.click()}
                             className="h-32 border-2 border-dashed border-accent-20 rounded-lg flex flex-col items-center justify-center gap-2 hover:border-primary-100 hover:bg-secondary-600 transition-all"
                         >
                             <Upload className="w-8 h-8 text-accent-60" />
