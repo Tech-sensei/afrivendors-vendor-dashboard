@@ -5,10 +5,8 @@
 
 @theme inline {
   /* Font Families */
-  --font-unbounded: var(--font-unbounded-sans);
-  --font-unageo: var(--font-unageo-sans);
-  --font-family-unbounded: var(--font-unbounded-sans), sans-serif;
-  --font-family-unageo: var(--font-unageo-sans), sans-serif;
+  --font-unbounded: var(--font-unbounded-sans), sans-serif;
+  --font-unageo: var(--font-unageo-sans), sans-serif;
 
   /* Screens */
   --breakpoint-*: initial;
