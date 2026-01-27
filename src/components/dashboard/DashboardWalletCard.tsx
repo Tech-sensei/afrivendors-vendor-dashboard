@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { Wallet, Eye, EyeOff, ChevronRight, TrendingUp } from "lucide-react";
 import Link from "next/link";
 
-export function DashboardWalletCard() {
+export const DashboardWalletCard = React.memo(function DashboardWalletCard() {
   const [showBalance, setShowBalance] = useState(true);
   const balance = 3847.50;
 
@@ -57,4 +57,4 @@ export function DashboardWalletCard() {
       </div>
     </div>
   );
-}
+});

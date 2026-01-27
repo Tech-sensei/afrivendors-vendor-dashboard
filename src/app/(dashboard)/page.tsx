@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { 
   statsBreakdown, 
   earningsData, 
@@ -9,11 +9,18 @@ import {
   StatsBreakdown
 } from '@/data/dashboard';
 import { DashboardStats } from '@/components/dashboard/DashboardStats';
-import { EarningsChart } from '@/components/dashboard/EarningsChart';
 import { UpcomingAppointments } from '@/components/dashboard/UpcomingAppointments';
-import { RecentMessages } from '@/components/dashboard/RecentMessages';
 import { DashboardWalletCard } from '@/components/dashboard/DashboardWalletCard';
-import { BusinessRatingCard } from '@/components/dashboard/BusinessRatingCard';
+import { 
+  EarningsChartSkeleton, 
+  MessagesSkeleton, 
+  RatingCardSkeleton 
+} from '@/components/dashboard/SkeletonLoaders';
+
+// Lazy load heavy components
+const EarningsChart = lazy(() => import('@/components/dashboard/EarningsChart').then(mod => ({ default: mod.EarningsChart })));
+const RecentMessages = lazy(() => import('@/components/dashboard/RecentMessages').then(mod => ({ default: mod.RecentMessages })));
+const BusinessRatingCard = lazy(() => import('@/components/dashboard/BusinessRatingCard').then(mod => ({ default: mod.BusinessRatingCard })));
 
 export default function DashboardPage() {
   const [timeFilter, setTimeFilter] = useState<keyof StatsBreakdown>('weekly');
@@ -61,7 +68,9 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           {/* Large Content Column (2/3) */}
           <div className="lg:col-span-2 flex flex-col gap-8">
-            <EarningsChart data={earningsData} />
+            <Suspense fallback={<EarningsChartSkeleton />}>
+              <EarningsChart data={earningsData} />
+            </Suspense>
             <UpcomingAppointments appointments={upcomingAppointments} />
           </div>
 
@@ -71,8 +80,12 @@ export default function DashboardPage() {
             <div className="hidden lg:block">
               <DashboardWalletCard />
             </div>
-            <BusinessRatingCard />
-            <RecentMessages messages={recentMessages} />
+            <Suspense fallback={<RatingCardSkeleton />}>
+              <BusinessRatingCard />
+            </Suspense>
+            <Suspense fallback={<MessagesSkeleton />}>
+              <RecentMessages messages={recentMessages} />
+            </Suspense>
           </div>
         </div>
       </div>

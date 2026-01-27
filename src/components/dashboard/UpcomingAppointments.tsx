@@ -9,7 +9,7 @@ interface UpcomingAppointmentsProps {
   appointments: UpcomingAppointment[];
 }
 
-export function UpcomingAppointments({ appointments }: UpcomingAppointmentsProps) {
+export const UpcomingAppointments = React.memo(function UpcomingAppointments({ appointments }: UpcomingAppointmentsProps) {
   return (
     <div className="bg-white border border-accent-20/60 rounded-xl p-6  shadow-sm flex flex-col h-full">
       <div className="flex items-center justify-between mb-8">
@@ -68,4 +68,4 @@ export function UpcomingAppointments({ appointments }: UpcomingAppointmentsProps
       </div>
     </div>
   );
-}
+});

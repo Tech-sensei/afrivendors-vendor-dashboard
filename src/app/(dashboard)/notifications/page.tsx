@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Bell, CheckCheck, Trash2 } from 'lucide-react';
+import { Bell, CheckCheck, Trash2, AlertCircle } from 'lucide-react';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { toast } from 'sonner';
 import { mockNotifications, VendorNotification } from '@/data/notifications';
 import { NotificationItem } from '@/components/notifications/NotificationItem';
@@ -11,6 +12,11 @@ type FilterType = 'all' | 'unread' | 'reminders' | 'appointments' | 'messages';
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<VendorNotification[]>(mockNotifications);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+
+  // Modal States
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isClearAllConfirmOpen, setIsClearAllConfirmOpen] = useState(false);
+  const [notificationToDelete, setNotificationToDelete] = useState<string | null>(null);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
@@ -26,15 +32,31 @@ export default function NotificationsPage() {
     toast.success('All notifications marked as read!');
   };
 
-  const deleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-    toast.error('Notification deleted');
+  const handleDeleteClick = (id: string) => {
+    setNotificationToDelete(id);
+    setIsDeleteConfirmOpen(true);
   };
 
-  const deleteAllRead = () => {
+  const handleConfirmDelete = () => {
+    if (notificationToDelete) {
+      setNotifications(prev => prev.filter(n => n.id !== notificationToDelete));
+      setNotificationToDelete(null);
+      toast.error('Notification deleted');
+    }
+  };
+
+  const handleClearAllClick = () => {
+    setIsClearAllConfirmOpen(true);
+  };
+
+  const handleConfirmClearAll = () => {
     const readCount = notifications.filter(n => n.isRead).length;
-    if (readCount === 0) return;
+    if (readCount === 0) {
+        setIsClearAllConfirmOpen(false);
+        return;
+    }
     setNotifications(prev => prev.filter(n => !n.isRead));
+    setIsClearAllConfirmOpen(false);
     toast.error(`${readCount} read notifications deleted`);
   };
 
@@ -88,7 +110,7 @@ export default function NotificationsPage() {
             )}
             {notifications.some(n => n.isRead) && (
               <button
-                onClick={deleteAllRead}
+                onClick={handleClearAllClick}
                 className="flex items-center gap-2 px-5 py-3 rounded-xl bg-white border border-accent-20 hover:bg-red-50 hover:border-red-100 text-red-600 font-unageo text-sm font-bold transition-all shadow-sm"
               >
                 <Trash2 size={18} />
@@ -116,7 +138,7 @@ export default function NotificationsPage() {
                 px-5 py-2.5 rounded-[10px] font-unageo text-sm font-bold whitespace-nowrap transition-all
                 ${activeFilter === filter.id 
                   ? 'bg-primary-100 text-white shadow-md' 
-                  : 'bg-transparent text-accent-60 hover:text-secondary-000 hover:bg-white/50'
+                  : 'bg-transparent text-accent-60 hover:text-secondary-000 hover:bg-accent-10'
                 }
               `}
             >
@@ -149,7 +171,7 @@ export default function NotificationsPage() {
                 key={notification.id}
                 notification={notification}
                 onRead={markAsRead}
-                onDelete={deleteNotification}
+                onDelete={handleDeleteClick}
                 onAction={handleAction}
               />
             ))}
@@ -165,6 +187,35 @@ export default function NotificationsPage() {
            </p>
         </div>
       )}
+      {/* Confirm Deletion Modal */}
+      <ConfirmModal
+        open={isDeleteConfirmOpen}
+        onOpenChange={setIsDeleteConfirmOpen}
+        onConfirm={handleConfirmDelete}
+        title="Delete Notification?"
+        description="Are you sure you want to delete this notification? This action cannot be undone."
+        confirmText="Yes, Delete"
+        cancelText="Cancel"
+        icon={Trash2}
+        iconColor="text-red-500"
+        iconBg="bg-red-50"
+        confirmButtonVariant="destructive"
+      />
+
+      {/* Confirm Clear All Modal */}
+      <ConfirmModal
+        open={isClearAllConfirmOpen}
+        onOpenChange={setIsClearAllConfirmOpen}
+        onConfirm={handleConfirmClearAll}
+        title="Clear Read Notifications?"
+        description="This will permanently delete all notifications that have been marked as read. Are you sure?"
+        confirmText="Clear All"
+        cancelText="Cancel"
+        icon={AlertCircle}
+        iconColor="text-red-500"
+        iconBg="bg-red-50"
+        confirmButtonVariant="destructive"
+      />
     </div>
   );
 }

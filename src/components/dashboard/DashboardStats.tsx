@@ -14,7 +14,7 @@ interface DashboardStatsProps {
   stats: DashboardStat;
 }
 
-export function DashboardStats({ stats }: DashboardStatsProps) {
+export const DashboardStats = React.memo(function DashboardStats({ stats }: DashboardStatsProps) {
   const statCards = [
     {
       label: "Total Appointments",
@@ -98,4 +98,4 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
       ))}
     </div>
   );
-}
+});
