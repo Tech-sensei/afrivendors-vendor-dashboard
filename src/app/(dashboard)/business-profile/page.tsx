@@ -14,10 +14,9 @@ import { ProfileGallery } from '@/components/business-profile/ProfileGallery';
 import { LocationCard } from '@/components/business-profile/LocationCard';
 import { ContactCard } from '@/components/business-profile/ContactCard';
 import { HoursCard } from '@/components/business-profile/HoursCard';
-import { SocialLinksCard } from '@/components/business-profile/SocialLinksCard';
 import { EditProfileDrawer } from '@/components/business-profile/EditProfileDrawer';
 
-type DrawerType = 'basic' | 'description' | 'logo' | 'gallery' | 'location' | 'contact' | 'hours' | 'social' | null;
+type DrawerType = 'basic' | 'description' | 'gallery' | 'location' | 'contact' | 'hours' | null;
 
 export default function BusinessProfilePage() {
   const [profile, setProfile] = useState<BusinessProfile>(initialProfile);
@@ -55,9 +54,6 @@ export default function BusinessProfilePage() {
       case 'hours':
         setEditingData({ openingHours: { ...profile.openingHours } });
         break;
-      case 'social':
-        setEditingData({ socialLinks: { ...profile.socialLinks } });
-        break;
     }
     setActiveDrawer(type);
   };
@@ -80,26 +76,6 @@ export default function BusinessProfilePage() {
         setIsSaving(false);
         toast.success('All changes saved to server!');
     }, 1000);
-  };
-
-  const handleLogoUpload = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = (e: Event) => {
-      const target = e.target as HTMLInputElement;
-      const file = target.files?.[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const imageUrl = event.target?.result as string;
-          setProfile((prev) => ({ ...prev, logo: imageUrl }));
-          toast.success('Logo uploaded successfully!');
-        };
-        reader.readAsDataURL(file);
-      }
-    };
-    input.click();
   };
 
   const handleGalleryUpload = () => {
@@ -172,7 +148,6 @@ export default function BusinessProfilePage() {
       
         <ProfileGallery 
           profile={profile}
-          onUploadLogo={handleLogoUpload}
           onUploadGallery={handleGalleryUpload}
           onSetBanner={handleSetBannerImage}
           onRemoveImage={handleRemoveGalleryImage}
@@ -181,11 +156,6 @@ export default function BusinessProfilePage() {
         <HoursCard
           openingHours={profile.openingHours}
           onEdit={() => openDrawer('hours')}
-        />
-
-        <SocialLinksCard
-          socialLinks={profile.socialLinks}
-          onEdit={() => openDrawer('social')}
         />
       </div>
 

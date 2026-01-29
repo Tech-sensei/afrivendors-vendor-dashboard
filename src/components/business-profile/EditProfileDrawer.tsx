@@ -3,7 +3,7 @@ import React from 'react';
 import { X, Save, Facebook, Instagram, Twitter, Linkedin } from 'lucide-react';
 import { BusinessProfile, businessCategories } from '@/data/business-profile';
 
-type DrawerType = 'basic' | 'description' | 'logo' | 'gallery' | 'location' | 'contact' | 'hours' | 'social' | null;
+type DrawerType = 'basic' | 'description' | 'gallery' | 'location' | 'contact' | 'hours' | null;
 
 interface EditProfileDrawerProps {
   isOpen: boolean;
@@ -29,7 +29,6 @@ export function EditProfileDrawer({
       case 'location': return 'Edit Location';
       case 'contact': return 'Edit Contact Information';
       case 'hours': return 'Edit Opening Hours';
-      case 'social': return 'Edit Social Links';
       default: return 'Edit Profile';
     }
   };
@@ -41,7 +40,6 @@ export function EditProfileDrawer({
       case 'location': return 'Update your business address';
       case 'contact': return 'Update how customers can reach you';
       case 'hours': return 'Set your business operating hours';
-      case 'social': return 'Connect your social media profiles';
       default: return '';
     }
   };
@@ -305,35 +303,6 @@ export function EditProfileDrawer({
             </div>
           )}
 
-          {type === 'social' && (
-            <div className="space-y-6">
-              {[
-                { key: 'facebook', icon: Facebook, color: '#1877F2', label: 'Facebook' },
-                { key: 'instagram', icon: Instagram, color: '#E1306C', label: 'Instagram' },
-                { key: 'twitter', icon: Twitter, color: '#1DA1F2', label: 'Twitter' },
-                { key: 'linkedin', icon: Linkedin, color: '#0A66C2', label: 'LinkedIn' }
-              ].map(({ key, icon: Icon, color, label }) => (
-                <div key={key}>
-                  <label className="flex items-center gap-2 font-unageo text-sm font-semibold text-secondary-000 mb-2 uppercase tracking-widest text-zinc-400">
-                    <Icon size={18} style={{ color }} />
-                    {label}
-                  </label>
-                  <input
-                    type="text"
-                    value={data.socialLinks?.[key] || ''}
-                    onChange={(e) =>
-                      setData({
-                        ...data,
-                        socialLinks: { ...data.socialLinks, [key]: e.target.value }
-                      })
-                    }
-                    placeholder={`${key}.com/yourbusiness`}
-                    className="w-full px-5 py-4 rounded-2xl border-2 border-zinc-200 bg-white focus:border-primary-100 focus:ring-0 outline-none font-unageo text-[15px] transition-all"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Footer */}

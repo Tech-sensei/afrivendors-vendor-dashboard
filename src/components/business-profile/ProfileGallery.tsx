@@ -5,7 +5,6 @@ import { BusinessProfile } from '@/data/business-profile';
 
 interface ProfileGalleryProps {
   profile: BusinessProfile;
-  onUploadLogo: () => void;
   onUploadGallery: () => void;
   onSetBanner: (url: string) => void;
   onRemoveImage: (index: number) => void;
@@ -13,41 +12,14 @@ interface ProfileGalleryProps {
 
 export function ProfileGallery({
   profile,
-  onUploadLogo,
   onUploadGallery,
   onSetBanner,
   onRemoveImage
 }: ProfileGalleryProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {/* Logo Section - Takes up 1 column on medium screens */}
+    <div className="grid grid-cols-1 gap-6">
+      {/* Gallery Section - Full width */}
       <div className="bg-white border border-accent-20 rounded-2xl p-6 shadow-sm">
-        <div className="mb-4">
-          <h2 className="font-unbounded text-lg font-bold text-secondary-000 mb-1">
-            Business Logo
-          </h2>
-          <p className="font-unageo text-accent-60 text-sm">
-            Upload your business logo
-          </p>
-        </div>
-
-        <div className="relative w-40 h-40 mx-auto rounded-xl overflow-hidden border-2 border-accent-20 group">
-          <img
-            src={profile.logo}
-            alt="Business Logo"
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-          />
-          <button
-            onClick={onUploadLogo}
-            className="absolute bottom-2 right-2 w-9 h-9 flex items-center justify-center rounded-full bg-primary-100 text-white shadow-md hover:scale-110 transition-transform cursor-pointer"
-          >
-            <Camera size={18} />
-          </button>
-        </div>
-      </div>
-
-      {/* Gallery Section - Takes up 2 columns on medium screens */}
-      <div className="md:col-span-2 bg-white border border-accent-20 rounded-2xl p-6 shadow-sm">
         <div className="mb-4">
           <h2 className="font-unbounded text-lg font-bold text-secondary-000 mb-1">
             Gallery / Portfolio

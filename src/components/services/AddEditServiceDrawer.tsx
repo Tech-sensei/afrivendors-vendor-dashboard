@@ -221,31 +221,90 @@ export function AddEditServiceDrawer({ isOpen, onClose, service, onSave }: AddEd
               />
             </div>
 
-            {/* Image URL Dropdown (Simplified version of what was there) */}
-            <div className="space-y-2.5">
+            {/* Service Image Upload */}
+            <div className="space-y-4">
               <label className="flex items-center gap-2 font-unageo text-sm font-semibold text-secondary-000">
                 <ImageIcon className="w-4 h-4 text-primary-100" />
-                Service Image URL
+                Service Image
               </label>
-              <input
-                type="url"
-                value={formData.imageUrl}
-                onChange={(e) => setFormData(prev => ({ ...prev, imageUrl: e.target.value }))}
-                placeholder="Paste an image URL here..."
-                className="w-full py-3.5 px-4 bg-white border border-secondary-600 rounded-xl font-unageo text-[15px] text-secondary-000 placeholder:text-accent-60 outline-none transition-all duration-200 focus:border-primary-100 focus:ring-4 focus:ring-primary-100/5"
-              />
-              {formData.imageUrl && (
-                <div className="mt-2 w-full h-40 rounded-2xl overflow-hidden bg-secondary-700 relative group">
+              
+              {!formData.imageUrl ? (
+                <div 
+                  onClick={() => document.getElementById('image-upload')?.click()}
+                  className="w-full aspect-[2/1] border-2 border-dashed border-zinc-200 rounded-3xl bg-secondary-800/50 flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-primary-100 hover:bg-primary-100/5 transition-all group"
+                >
+                  <input
+                    id="image-upload"
+                    type="file"
+                    accept="image/png, image/jpeg"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        if (file.size > 5 * 1024 * 1024) {
+                          alert('File size exceeds 5MB limit');
+                          return;
+                        }
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          setFormData(prev => ({ ...prev, imageUrl: event.target?.result as string }));
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-sm border border-zinc-100 group-hover:scale-110 transition-transform">
+                    <ImageIcon className="w-6 h-6 text-secondary-000" />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-unageo text-base font-bold text-secondary-000">Click to upload or drag and drop</p>
+                    <p className="font-unageo text-sm text-accent-60">JPG or PNG (max 5MB)</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="relative w-full aspect-[21/9] rounded-3xl overflow-hidden group">
                   <img
                     src={formData.imageUrl}
-                    alt="Preview"
+                    alt="Service Preview"
                     className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById('image-upload')?.click()}
+                      className="px-5 py-2.5 bg-white rounded-xl font-unageo text-sm font-bold text-secondary-000 hover:bg-zinc-100 transition-colors"
+                    >
+                      Change Image
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, imageUrl: '' }))}
+                      className="px-5 py-2.5 bg-red-500 rounded-xl font-unageo text-sm font-bold text-white hover:bg-red-600 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <input
+                    id="image-upload"
+                    type="file"
+                    accept="image/png, image/jpeg"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          setFormData(prev => ({ ...prev, imageUrl: event.target?.result as string }));
+                        };
+                        reader.readAsDataURL(file);
+                      }
                     }}
                   />
                 </div>
               )}
+              <p className="font-unageo text-[13px] text-accent-80 leading-relaxed">
+                Upload a high-quality image that represents your service (JPG or PNG, max 5MB)
+              </p>
             </div>
 
             {/* Availability */}
