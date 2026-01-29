@@ -88,10 +88,9 @@ export function ChatDrawer({
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
             className={`fixed z-[50] bg-white shadow-xl flex flex-col overflow-hidden
               ${isMobile 
-                ? 'left-4 right-4 bottom-0 top-[60px] rounded-t-2xl' 
-                : 'top-0 right-0 bottom-0 w-[500px] border-l border-accent-20'
-              }
-            `}
+                ? 'left-0 right-0 bottom-0 top-[60px] rounded-t-[24px]' 
+                : 'left-0 right-0 bottom-0 top-[80px] rounded-t-[32px]'
+            }`}
           >
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-accent-20 bg-white shadow-sm z-10">

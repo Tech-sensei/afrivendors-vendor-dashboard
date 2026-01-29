@@ -3,6 +3,7 @@
 import React from 'react';
 import { X, User, Phone, Mail, MapPin, Calendar, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useMobile } from "@/hooks/useMobile";
 
 interface CustomerInfoDrawerProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface CustomerInfoDrawerProps {
 }
 
 export function CustomerInfoDrawer({ isOpen, onClose, customer }: CustomerInfoDrawerProps) {
+  const isMobile = useMobile();
   if (!customer) return null;
 
   return (
@@ -25,11 +27,11 @@ export function CustomerInfoDrawer({ isOpen, onClose, customer }: CustomerInfoDr
             className="fixed inset-0 bg-secondary-000/20 backdrop-blur-[1px] z-[60]"
           />
           <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
+            initial={isMobile ? { y: '100%' } : { x: '100%' }}
+            animate={isMobile ? { y: 0 } : { x: 0 }}
+            exit={isMobile ? { y: '100%' } : { x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed top-0 right-0 bottom-0 w-[320px] bg-white shadow-2xl z-[70] flex flex-col border-l border-accent-20"
+            className={`fixed ${isMobile ? 'bottom-0 left-0 right-0 h-[80vh] rounded-t-[24px]' : 'top-0 right-0 bottom-0 w-[320px] rounded-l-2xl'} bg-white shadow-2xl z-[70] flex flex-col border-l border-accent-20 overflow-hidden`}
           >
             <div className="p-6 border-b border-accent-20 flex justify-between items-center">
               <h3 className="font-unbounded text-lg font-bold text-secondary-000">Customer Info</h3>

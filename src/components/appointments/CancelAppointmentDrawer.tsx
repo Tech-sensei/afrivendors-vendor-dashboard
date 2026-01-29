@@ -41,7 +41,7 @@ export function CancelAppointmentDrawer({
             animate={isMobile ? { y: 0 } : { x: 0 }}
             exit={isMobile ? { y: '100%' } : { x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className={`fixed ${isMobile ? 'bottom-0 left-4 right-4 h-[60vh] max-h-[60vh] rounded-t-3xl' : 'top-0 right-0 bottom-0 w-[90%] max-w-[440px] rounded-l-2xl'} bg-white shadow-2xl z-[1000] flex flex-col overflow-hidden`}
+            className={`fixed ${isMobile ? 'bottom-0 left-0 right-0 h-[60vh] max-h-[60vh] rounded-t-[24px]' : 'top-0 right-0 bottom-0 w-[90%] max-w-[440px] rounded-l-2xl'} bg-white shadow-2xl z-[1000] flex flex-col overflow-hidden`}
           >
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
                  <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6 border border-red-100">

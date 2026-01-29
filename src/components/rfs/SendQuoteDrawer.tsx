@@ -78,11 +78,11 @@ export function SendQuoteDrawer({
             animate={isMobile ? { y: 0 } : { x: 0 }}
             exit={isMobile ? { y: '100%' } : { x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className={`fixed ${
-              isMobile 
-                ? 'bottom-0 left-4 right-4 h-[90vh] max-h-[90vh] rounded-t-2xl' 
-                : 'top-0 right-0 bottom-0 w-[90%] max-w-[600px] rounded-tl-2xl rounded-bl-2xl'
-            } bg-white shadow-[-4px_0_24px_rgba(0,0,0,0.12)] z-[1000] flex flex-col overflow-hidden`}
+            className={`fixed z-[1001] bg-white shadow-2xl flex flex-col overflow-hidden ${
+              isMobile
+                ? 'bottom-0 left-0 right-0 h-[92vh] max-h-[92vh] rounded-t-[24px]' 
+                : 'top-0 right-0 bottom-0 w-[90%] max-w-[600px] rounded-l-3xl shadow-[-20px_0_50px_rgba(0,0,0,0.1)]'
+            }`}
           >
             {/* Header */}
             <div className="p-6 border-b border-accent-20 bg-white">

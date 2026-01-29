@@ -44,7 +44,7 @@ export function CalendarSyncDrawer({ isOpen, onClose, messageContent, onSave }: 
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed bottom-0 left-4 right-4 sm:left-auto sm:right-0 sm:bottom-0 sm:top-0 sm:w-[400px] bg-white shadow-2xl z-[70] flex flex-col rounded-t-2xl sm:rounded-none sm:rounded-l-2xl"
+            className="fixed bottom-0 left-0 right-0 sm:left-auto sm:right-0 sm:bottom-0 sm:top-0 sm:w-[400px] bg-white shadow-2xl z-[70] flex flex-col rounded-t-[24px] sm:rounded-none sm:rounded-l-2xl"
           >
             <div className="p-6 border-b border-accent-20 flex justify-between items-center">
               <h3 className="font-unbounded text-lg font-bold text-secondary-000 flex items-center gap-2">
