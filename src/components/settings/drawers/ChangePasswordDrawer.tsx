@@ -7,12 +7,14 @@ interface ChangePasswordDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: any) => void;
+  isSubmitting?: boolean;
 }
 
 export function ChangePasswordDrawer({
   isOpen,
   onClose,
   onSubmit,
+  isSubmitting,
 }: ChangePasswordDrawerProps) {
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
@@ -134,9 +136,10 @@ export function ChangePasswordDrawer({
           </button>
           <button
             onClick={() => onSubmit(data)}
-            className="px-6 py-3 rounded-xl bg-primary-100 text-white text-sm font-semibold hover:bg-primary-100/90 transition-all shadow-lg shadow-primary-100/10 active:scale-95 cursor-pointer"
+            disabled={isSubmitting}
+            className="px-6 py-3 rounded-xl bg-primary-100 text-white text-sm font-semibold hover:bg-primary-100/90 transition-all shadow-lg shadow-primary-100/10 active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Update Password
+            {isSubmitting ? 'Updating...' : 'Update Password'}
           </button>
         </div>
       </div>

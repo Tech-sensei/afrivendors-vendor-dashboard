@@ -2,7 +2,7 @@
 
 import React from "react";
 import { X, AlertTriangle, XCircle } from "lucide-react";
-import { VendorAppointment } from "@/data/appointments";
+import { VendorAppointment } from "@/types/appointments";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMobile } from "@/hooks/useMobile";
 
@@ -10,7 +10,7 @@ interface CancelAppointmentDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   appointment: VendorAppointment | null;
-  onConfirm: (id: string) => void;
+  onConfirm: () => void;
 }
 
 export function CancelAppointmentDrawer({ 
@@ -57,7 +57,7 @@ export function CancelAppointmentDrawer({
 
                   <div className="w-full space-y-3">
                      <button 
-                        onClick={() => onConfirm(appointment.id)}
+                        onClick={() => onConfirm()}
                         className="w-full py-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-unbounded text-[10px] font-bold uppercase tracking-widest transition-all shadow-md active:scale-95"
                       >
                         Yes, Cancel Appointment

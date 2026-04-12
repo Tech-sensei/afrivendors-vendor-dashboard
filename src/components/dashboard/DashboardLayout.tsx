@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { LogoutConfirmModal } from './LogoutConfirmModal';
+import { useAuthAPI } from '@/services/useAuthAPI';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -20,14 +21,17 @@ export default function DashboardLayout({
   headerDescription,
 }: DashboardLayoutProps) {
   const router = useRouter();
+  const { logoutAsync, isLoggingOut } = useAuthAPI();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const handleLogout = () => {
-    // Handle logout logic here
-    console.log('Logging out...');
+  const handleLogout = async () => {
+    try {
+      await logoutAsync();
+    } catch {
+      // even if API fails, clear local state and redirect
+    }
     setShowLogoutModal(false);
-    // Redirect to sign-in page
     router.push('/sign-in');
   };
 
@@ -67,6 +71,7 @@ export default function DashboardLayout({
         open={showLogoutModal}
         onOpenChange={setShowLogoutModal}
         onConfirm={handleLogout}
+        isLoading={isLoggingOut}
       />
     </div>
   );

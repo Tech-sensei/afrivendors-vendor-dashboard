@@ -2,31 +2,22 @@ import Image from 'next/image';
 import { Clock, DollarSign, Tag, Edit, Trash2, EyeOff, Eye } from 'lucide-react';
 
 export interface Service {
-  id: string;
-  name: string;
-  category: string;
+  id: number;
+  serviceName: string;
+  category: { id: number; name: string };
   price: string;
   duration: string;
   description: string;
-  imageUrl?: string;
+  imageUrl: string | null;
   isPublished: boolean;
-  availability: {
-    monday: boolean;
-    tuesday: boolean;
-    wednesday: boolean;
-    thursday: boolean;
-    friday: boolean;
-    saturday: boolean;
-    sunday: boolean;
-  };
 }
 
 interface ServiceCardProps {
   service: Service;
-  onView?: (id: string) => void;
-  onEdit?: (id: string) => void;
-  onTogglePublish?: (id: string) => void;
-  onDelete?: (id: string) => void;
+  onView?: (id: number) => void;
+  onEdit?: (id: number) => void;
+  onTogglePublish?: (id: number) => void;
+  onDelete?: (id: number) => void;
 }
 
 export function ServiceCard({
@@ -47,7 +38,7 @@ export function ServiceCard({
           <div className="w-full sm:w-[160px] h-[160px] rounded-2xl overflow-hidden flex-shrink-0 bg-secondary-700 relative shadow-inner">
             <Image
               src={service.imageUrl}
-              alt={service.name}
+              alt={service.serviceName}
               fill
               sizes="(max-width: 640px) 100vw, 160px"
               className="object-cover transition-transform duration-500 group-hover:scale-110"
@@ -71,15 +62,14 @@ export function ServiceCard({
                 <div className="flex items-center gap-2 mb-1.5">
                   <Tag className="w-3.5 h-3.5 text-primary-100" />
                   <span className="font-unageo text-xs font-bold text-primary-100 uppercase tracking-widest">
-                    {service.category}
+                    {service.category.name}
                   </span>
                 </div>
                 <h3 className="font-unbounded text-xl font-bold text-secondary-000 mb-2 group-hover:text-primary-100 transition-colors">
-                  {service.name}
+                  {service.serviceName}
                 </h3>
               </div>
 
-              {/* Status Badge - Hidden on Desktop, shown on image */}
               <div className="hidden sm:block">
                 <span
                   className={`inline-flex items-center px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider flex-shrink-0 ml-3 font-unageo ${service.isPublished ? 'bg-[#D1FAE5] text-[#059669]' : 'bg-secondary-700 text-accent-80'}`}

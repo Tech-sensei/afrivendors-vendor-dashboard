@@ -18,6 +18,8 @@ import {
   X,
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
+import { useAppSelector } from '@/store/hooks';
 
 interface SidebarProps {
   activePath?: string;
@@ -27,6 +29,24 @@ interface SidebarProps {
 }
 
 export function Sidebar({ activePath = '/', onLogout, isMobileOpen = false, onMobileClose }: SidebarProps) {
+  const { profile } = useAppSelector((state) => state.auth);
+
+  const vendor = profile?.vendor;
+  const kyc = profile?.kyc;
+
+  // Display name: business name from KYC, fallback to full name
+  const displayName = kyc?.businessName || `${vendor?.firstName ?? ''} ${vendor?.lastName ?? ''}`.trim() || 'Vendor';
+  const category = kyc?.category?.name ?? '';
+  const bannerImage = profile?.gallery?.find((g) => g.isBanner)?.imageUrl ?? kyc?.bannerImage ?? null;
+
+  // Initials for avatar fallback
+  const initials = displayName
+    .split(' ')
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
   const navigationItems = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/appointments', label: 'Appointments', icon: Calendar },
@@ -58,28 +78,55 @@ export function Sidebar({ activePath = '/', onLogout, isMobileOpen = false, onMo
           <X className="w-5 h-5 text-secondary-000" />
         </button>
 
-        {/* Vendor Profile Section - Fixed at Top */}
+        {/* Vendor Profile Section */}
         <div className="shrink-0 p-6 border-b border-accent-10 mt-3 sm:mt-0">
           <div className="flex items-start gap-3 mb-2">
-            <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center shrink-0">
-              <span className="text-white font-unbounded font-bold text-lg">ZM</span>
+            {/* Avatar — banner image or initials */}
+            <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 bg-primary-100 flex items-center justify-center">
+              {bannerImage ? (
+                <Image
+                  src={bannerImage}
+                  alt={displayName}
+                  width={48}
+                  height={48}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-white font-unbounded font-bold text-base">{initials}</span>
+              )}
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="font-unbounded font-bold text-secondary-000 text-base truncate">
-                ZuriGlow Bea...
+              <h2 className="font-unbounded font-bold text-secondary-000 text-sm truncate">
+                {displayName}
               </h2>
-              <p className="text-xs text-accent-60 mt-0.5">Wellness & Beauty</p>
+              {category && (
+                <p className="text-xs text-accent-60 mt-0.5 truncate">{category}</p>
+              )}
             </div>
           </div>
-          {/* Rating Box */}
-          <div className="bg-secondary-800 rounded-lg px-3 py-2 flex items-center gap-2">
-            <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-            <span className="font-unbounded font-bold text-secondary-000 text-sm">4.8</span>
-            <span className="text-xs text-accent-60">(92 reviews)</span>
-          </div>
+
+          {/* KYC status badge */}
+          {kyc?.approvalStatus && (
+            <div className={`rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs font-semibold mt-1 ${
+              kyc.approvalStatus === 'approved'
+                ? 'bg-green-50 text-green-700'
+                : kyc.approvalStatus === 'pending'
+                ? 'bg-yellow-50 text-yellow-700'
+                : kyc.approvalStatus === 'rejected'
+                ? 'bg-red-50 text-red-700'
+                : 'bg-secondary-800 text-accent-60'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${
+                kyc.approvalStatus === 'approved' ? 'bg-green-500' :
+                kyc.approvalStatus === 'pending' ? 'bg-yellow-500' :
+                kyc.approvalStatus === 'rejected' ? 'bg-red-500' : 'bg-accent-40'
+              }`} />
+              {kyc.approvalStatus.charAt(0).toUpperCase() + kyc.approvalStatus.slice(1)}
+            </div>
+          )}
         </div>
 
-        {/* Navigation - Scrollable Middle Section */}
+        {/* Navigation */}
         <nav className="flex-1 overflow-y-auto p-4 space-y-1 min-h-0">
           {navigationItems.map((item) => {
             const Icon = item.icon;
@@ -88,12 +135,7 @@ export function Sidebar({ activePath = '/', onLogout, isMobileOpen = false, onMo
               <Link
                 key={item.path}
                 href={item.path}
-                onClick={() => {
-                  // Close mobile menu when link is clicked
-                  if (onMobileClose) {
-                    onMobileClose();
-                  }
-                }}
+                onClick={() => { if (onMobileClose) onMobileClose(); }}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${active
                   ? 'bg-primary-300 text-secondary-000 font-bold'
                   : 'text-secondary-000 hover:bg-secondary-800 font-medium'
@@ -106,16 +148,14 @@ export function Sidebar({ activePath = '/', onLogout, isMobileOpen = false, onMo
           })}
         </nav>
 
-        {/* Separator and Logout - Fixed at Bottom */}
+        {/* Logout */}
         <div className="shrink-0 p-4 border-t border-accent-10 bg-white">
           <button
             onClick={onLogout}
             className="w-full flex items-center gap-3 px-4 py-3 bg-transparent border-none rounded-lg cursor-pointer transition-all duration-200 hover:bg-red-50"
           >
             <LogOut className="w-5 h-5 text-red-600" />
-            <span className="text-[15px] font-normal text-red-600">
-              Logout
-            </span>
+            <span className="text-[15px] font-normal text-red-600">Logout</span>
           </button>
         </div>
       </aside>

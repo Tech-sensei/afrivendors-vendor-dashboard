@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { AlertCircle, Plus } from 'lucide-react';
+import { AlertCircle, Plus, Loader2 } from 'lucide-react';
 import { ServiceCard, Service } from '@/components/services/ServiceCard';
 import { ServicesHeader } from '@/components/services/ServicesHeader';
 import { ServicesStats } from '@/components/services/ServicesStats';
@@ -9,13 +9,32 @@ import { ServicesFilter } from '@/components/services/ServicesFilter';
 import { AddEditServiceDrawer } from '@/components/services/AddEditServiceDrawer';
 import { ViewServiceDrawer } from '@/components/services/ViewServiceDrawer';
 import { DeleteServiceDrawer } from '@/components/services/DeleteServiceDrawer';
-import { mockServices } from '@/data/services';
-import { toast } from 'sonner';
+import {
+  useVendorServices,
+  useCreateService,
+  useUpdateService,
+  useDeleteService,
+  useHideService,
+  usePublishService,
+} from '@/services/useVendorServices';
+import { useAppSelector } from '@/store/hooks';
 
 type FilterType = 'all' | 'published' | 'hidden';
 
 const ServicesPage = () => {
-  const [services, setServices] = useState<Service[]>(mockServices);
+  const vendorCategory = useAppSelector((state) => state.auth.profile?.kyc?.category?.name ?? '');
+  const { data, isLoading } = useVendorServices();
+  const services = data?.services ?? [];
+  const publishedCount = data?.publishedServices ?? 0;
+  const hiddenCount = data?.hiddenServices ?? 0;
+  const totalCount = data?.totalServices ?? 0;
+
+  const { mutateAsync: createService, isPending: isCreating } = useCreateService();
+  const { mutateAsync: updateService, isPending: isUpdating } = useUpdateService();
+  const { mutateAsync: deleteService, isPending: isDeleting } = useDeleteService();
+  const { mutateAsync: hideService } = useHideService();
+  const { mutateAsync: publishService } = usePublishService();
+
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isAddEditOpen, setIsAddEditOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -23,36 +42,35 @@ const ServicesPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<FilterType>('all');
 
-  const filteredServices = services.filter(service => {
-    const matchesSearch = service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         service.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         service.category.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' ||
-                         (statusFilter === 'published' && service.isPublished) ||
-                         (statusFilter === 'hidden' && !service.isPublished);
-    
+  const filteredServices = services.filter((service) => {
+    const matchesSearch =
+      service.serviceName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      service.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      service.category.name.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesStatus =
+      statusFilter === 'all' ||
+      (statusFilter === 'published' && service.isPublished) ||
+      (statusFilter === 'hidden' && !service.isPublished);
+
     return matchesSearch && matchesStatus;
   });
-
-  const publishedCount = services.filter(s => s.isPublished).length;
-  const hiddenCount = services.filter(s => !s.isPublished).length;
 
   const handleAddService = () => {
     setSelectedService(null);
     setIsAddEditOpen(true);
   };
 
-  const handleViewService = (id: string) => {
-    const service = services.find(s => s.id === id);
+  const handleViewService = (id: number) => {
+    const service = services.find((s) => s.id === id);
     if (service) {
       setSelectedService(service);
       setIsViewOpen(true);
     }
   };
 
-  const handleEditService = (id: string) => {
-    const service = services.find(s => s.id === id);
+  const handleEditService = (id: number) => {
+    const service = services.find((s) => s.id === id);
     if (service) {
       setSelectedService(service);
       setIsViewOpen(false);
@@ -60,74 +78,64 @@ const ServicesPage = () => {
     }
   };
 
-  const handleSaveService = (serviceData: Partial<Service>) => {
-    if (selectedService) {
-      // Edit existing service
-      setServices(prev =>
-        prev.map(s => (s.id === selectedService.id ? { ...s, ...serviceData } : s))
-      );
-      toast.success(`"${serviceData.name}" has been updated successfully!`);
+  const handleSaveService = async (payload: FormData, serviceId?: number) => {
+    if (serviceId) {
+      await updateService({ id: serviceId, payload });
     } else {
-      // Add new service
-      const newService: Service = {
-        id: `svc-${Date.now()}`,
-        ...serviceData,
-        isPublished: true
-      } as Service;
-      setServices(prev => [newService, ...prev]);
-      toast.success(`"${serviceData.name}" has been added to your services!`);
+      await createService(payload);
     }
     setIsAddEditOpen(false);
     setSelectedService(null);
   };
 
-
-
-  const handleTogglePublish = (id: string) => {
-    const service = services.find(s => s.id === id);
-    if (service) {
-      setServices(prev =>
-        prev.map(s => (s.id === id ? { ...s, isPublished: !s.isPublished } : s))
-      );
-      if (service.isPublished) {
-        toast.success(`"${service.name}" has been hidden from customers.`);
-      } else {
-        toast.success(`"${service.name}" is now published and visible to customers!`);
-      }
+  const handleTogglePublish = async (id: number) => {
+    const service = services.find((s) => s.id === id);
+    if (!service) return;
+    if (service.isPublished) {
+      await hideService(id);
+    } else {
+      await publishService(id);
     }
   };
 
-  const handleDeleteClick = (id: string) => {
-    const service = services.find(s => s.id === id);
+  const handleDeleteClick = (id: number) => {
+    const service = services.find((s) => s.id === id);
     if (service) {
       setSelectedService(service);
       setIsDeleteOpen(true);
     }
   };
 
-  const handleConfirmDelete = (id: string) => {
-    const service = services.find(s => s.id === id);
-    setServices(prev => prev.filter(s => s.id !== id));
+  const handleConfirmDelete = async (id: number) => {
+    await deleteService(id);
     setIsDeleteOpen(false);
-    toast.error(`"${service?.name}" has been permanently deleted.`);
+    setSelectedService(null);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 text-primary-100 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-[1400px] mx-auto space-y-6">
       <ServicesHeader onAddService={handleAddService} />
 
-      <ServicesStats 
-        totalCount={services.length}
+      <ServicesStats
+        totalCount={totalCount}
         publishedCount={publishedCount}
         hiddenCount={hiddenCount}
       />
 
-      <ServicesFilter 
+      <ServicesFilter
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         statusFilter={statusFilter}
         setStatusFilter={setStatusFilter}
-        totalCount={services.length}
+        totalCount={totalCount}
         publishedCount={publishedCount}
         hiddenCount={hiddenCount}
       />
@@ -181,7 +189,9 @@ const ServicesPage = () => {
           setSelectedService(null);
         }}
         service={selectedService}
+        vendorCategory={vendorCategory}
         onSave={handleSaveService}
+        isSaving={isCreating || isUpdating}
       />
 
       {/* View Service Drawer */}
@@ -193,9 +203,7 @@ const ServicesPage = () => {
         }}
         service={selectedService}
         onEdit={() => {
-          if (selectedService) {
-            handleEditService(selectedService.id);
-          }
+          if (selectedService) handleEditService(selectedService.id);
         }}
       />
 
@@ -208,10 +216,10 @@ const ServicesPage = () => {
         }}
         service={selectedService}
         onConfirm={handleConfirmDelete}
+        isDeleting={isDeleting}
       />
     </div>
   );
-}
+};
 
 export default ServicesPage;
-

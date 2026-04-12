@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner"
+import ReduxProvider from "@/providers/ReduxProvider";
+import AuthInitializer from "@/providers/AuthInitializer";
+import ReactQueryProvider from "@/providers/ReactQueryProvider";
 
 const unbounded = localFont({
   src: [
@@ -43,8 +46,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${unbounded.variable} ${unageo.variable} antialiased`}>
-        <Toaster />
-        {children}
+        <ReduxProvider>
+          <AuthInitializer>
+            <ReactQueryProvider>
+              <Toaster />
+              {children}
+            </ReactQueryProvider>
+          </AuthInitializer>
+        </ReduxProvider>
       </body>
     </html>
   );

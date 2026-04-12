@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { X, Clock, DollarSign, Calendar, Tag, Edit3 } from 'lucide-react';
+import { X, Clock, DollarSign, Tag, Edit3 } from 'lucide-react';
 import { Service } from './ServiceCard';
 
 interface ViewServiceDrawerProps {
@@ -14,10 +14,6 @@ interface ViewServiceDrawerProps {
 export function ViewServiceDrawer({ isOpen, onClose, service, onEdit }: ViewServiceDrawerProps) {
   if (!isOpen || !service) return null;
 
-  const availableDays = Object.entries(service.availability)
-    .filter(([, available]) => available)
-    .map(([day]) => day.charAt(0).toUpperCase() + day.slice(1));
-
   return (
     <>
       {/* Overlay */}
@@ -28,7 +24,7 @@ export function ViewServiceDrawer({ isOpen, onClose, service, onEdit }: ViewServ
 
       {/* Drawer */}
       <div className={`fixed z-50 bg-white shadow-2xl transform transition-transform duration-300 ease-out flex flex-col max-sm:bottom-0 max-sm:left-0 max-sm:right-0 max-sm:h-[92vh] max-sm:rounded-t-[24px] max-sm:translate-y-0 sm:right-0 sm:top-0 sm:h-full sm:w-full sm:max-w-[560px] sm:rounded-l-[32px] sm:translate-x-0 overflow-hidden`}>
-        
+
         {/* Header */}
         <div className="px-8 py-6 flex items-start justify-between flex-shrink-0">
           <div>
@@ -55,7 +51,7 @@ export function ViewServiceDrawer({ isOpen, onClose, service, onEdit }: ViewServ
               <div className="w-full h-[280px] rounded-[24px] overflow-hidden mb-8 relative group">
                 <Image
                   src={service.imageUrl}
-                  alt={service.name}
+                  alt={service.serviceName}
                   fill
                   sizes="(max-width: 560px) 100vw, 560px"
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
@@ -73,17 +69,17 @@ export function ViewServiceDrawer({ isOpen, onClose, service, onEdit }: ViewServ
             {/* Service Name & Category */}
             <div className="mb-8">
               <h3 className="font-unbounded text-3xl font-bold text-secondary-000 leading-tight mb-3">
-                {service.name}
+                {service.serviceName}
               </h3>
               <div className="flex items-center gap-2">
                 <Tag className="w-4 h-4 text-primary-100" />
                 <span className="font-unageo text-[15px] font-bold text-primary-100">
-                  {service.category}
+                  {service.category.name}
                 </span>
               </div>
             </div>
 
-            {/* Price & Duration Grid (Updated to match reference) */}
+            {/* Price & Duration Grid */}
             <div className="grid grid-cols-2 gap-5 mb-8">
               <div className="p-5 bg-secondary-700/40 rounded-[20px] flex flex-col gap-2">
                 <div className="flex items-center gap-2 text-accent-60">
@@ -107,37 +103,12 @@ export function ViewServiceDrawer({ isOpen, onClose, service, onEdit }: ViewServ
 
             {/* Description */}
             <div className="mb-8">
-              <h4 className="font-unageo text-[15px] font-bold text-secondary-000 mb-4 flex items-center gap-2">
-                <X className="w-4 h-4 text-primary-100 rotate-45" /> {/* Document-like icon */}
+              <h4 className="font-unageo text-[15px] font-bold text-secondary-000 mb-4">
                 Description
               </h4>
               <p className="font-unageo text-[15px] text-accent-80 leading-relaxed">
                 {service.description}
               </p>
-            </div>
-
-            {/* Availability */}
-            <div className="mb-8">
-              <div className="flex items-center gap-2 mb-5">
-                <Calendar className="w-5 h-5 text-primary-100" />
-                <h4 className="font-unageo text-[15px] font-bold text-secondary-000">
-                  Availability
-                </h4>
-              </div>
-              <div className="flex flex-wrap gap-2.5">
-                {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => {
-                  const dayLower = day.toLowerCase() as keyof typeof service.availability;
-                  const isAvailable = service.availability[dayLower];
-                  return (
-                    <span
-                      key={day}
-                      className={`px-4 py-2.5 rounded-xl font-unageo text-[13px] font-bold transition-colors ${isAvailable ? 'bg-primary-100 text-white' : 'bg-secondary-700 text-accent-80'}`}
-                    >
-                      {day.slice(0, 3)}
-                    </span>
-                  );
-                })}
-              </div>
             </div>
           </div>
         </div>
@@ -153,8 +124,6 @@ export function ViewServiceDrawer({ isOpen, onClose, service, onEdit }: ViewServ
           </button>
         </div>
       </div>
-
     </>
   );
 }
-

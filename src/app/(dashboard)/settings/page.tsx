@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
+import { useAuthAPI } from "@/services/useAuthAPI";
+import { useAppSelector } from "@/store/hooks";
 import { SettingsHeader } from "@/components/settings/SettingsHeader";
 import { AccountSettings } from "@/components/settings/AccountSettings";
 import { SecuritySettings } from "@/components/settings/SecuritySettings";
@@ -23,14 +25,15 @@ interface PayoutMethod {
 }
 
 export default function VendorSettings() {
+  const { changePasswordAsync, isChangingPassword } = useAuthAPI();
+  const { profile } = useAppSelector((state) => state.auth);
   const [activeDrawer, setActiveDrawer] = useState<DrawerType>(null);
 
-  // Account Settings (Initial State)
-  const [accountData] = useState({
-    name: "Adaeze Okonkwo",
-    email: "adaeze@zuriglow.com",
-    phone: "+234 803 456 7890",
-  });
+  const accountData = useMemo(() => ({
+    name: `${profile?.vendor?.firstName ?? ''} ${profile?.vendor?.lastName ?? ''}`.trim() || '—',
+    email: profile?.vendor?.email ?? '—',
+    phone: profile?.vendor?.phoneNumber ?? '—',
+  }), [profile]);
 
   // Security Settings
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
@@ -68,21 +71,17 @@ export default function VendorSettings() {
   const closeDrawer = () => setActiveDrawer(null);
 
   // Handlers
-  const handlePasswordSubmit = (data: any) => {
-    if (!data.current || !data.new || !data.confirm) {
-      toast.error("Please fill in all password fields");
-      return;
+  const handlePasswordSubmit = async (data: any) => {
+    try {
+      await changePasswordAsync({
+        oldPassword: data.current,
+        newPassword: data.new,
+        confirmNewPassword: data.confirm,
+      });
+      closeDrawer();
+    } catch {
+      // error toast handled inside useAuthAPI
     }
-    if (data.new !== data.confirm) {
-      toast.error("New passwords do not match");
-      return;
-    }
-    if (data.new.length < 8) {
-      toast.error("Password must be at least 8 characters");
-      return;
-    }
-    toast.success("Password updated successfully!");
-    closeDrawer();
   };
 
   const handleAddPayoutMethod = (newMethodData: any) => {
@@ -178,6 +177,7 @@ export default function VendorSettings() {
         isOpen={activeDrawer === "password"}
         onClose={closeDrawer}
         onSubmit={handlePasswordSubmit}
+        isSubmitting={isChangingPassword}
       />
 
       <AddPayoutMethodDrawer

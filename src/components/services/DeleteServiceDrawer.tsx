@@ -5,10 +5,11 @@ interface DeleteServiceDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   service: Service | null;
-  onConfirm: (id: string) => void;
+  onConfirm: (id: number) => void;
+  isDeleting?: boolean;
 }
 
-export function DeleteServiceDrawer({ isOpen, onClose, service, onConfirm }: DeleteServiceDrawerProps) {
+export function DeleteServiceDrawer({ isOpen, onClose, service, onConfirm, isDeleting = false }: DeleteServiceDrawerProps) {
   if (!isOpen || !service) return null;
 
   return (
@@ -61,12 +62,12 @@ export function DeleteServiceDrawer({ isOpen, onClose, service, onConfirm }: Del
             {/* Service Preview Card */}
             <div className="w-full p-6 bg-white border border-secondary-600 rounded-[20px] mb-6">
               <h4 className="font-unbounded text-lg font-bold text-secondary-000 mb-2">
-                {service.name}
+                {service.serviceName}
               </h4>
               <div className="flex items-center gap-2 mb-4">
                 <Tag className="w-4 h-4 text-[#C56C31]" />
                 <span className="font-unageo text-[14px] font-medium text-[#C56C31]">
-                  {service.category}
+                  {service.category.name}
                 </span>
               </div>
               <div className="h-[1px] w-full bg-secondary-600/30 mb-4" />
@@ -128,10 +129,11 @@ export function DeleteServiceDrawer({ isOpen, onClose, service, onConfirm }: Del
           </button>
           <button
             onClick={() => onConfirm(service.id)}
-            className="flex-[1.5] py-4 px-6 bg-[#A82B2B] text-white font-unageo text-[15px] font-bold rounded-xl flex items-center justify-center gap-2 transition-all duration-300 hover:brightness-110 hover:-translate-y-1 shadow-lg shadow-red-900/10 cursor-pointer active:scale-95"
+            disabled={isDeleting}
+            className="flex-[1.5] py-4 px-6 bg-[#A82B2B] text-white font-unageo text-[15px] font-bold rounded-xl flex items-center justify-center gap-2 transition-all duration-300 hover:brightness-110 hover:-translate-y-1 shadow-lg shadow-red-900/10 cursor-pointer active:scale-95 disabled:opacity-60"
           >
             <Trash2 className="w-5 h-5" />
-            Yes, Delete Service
+            {isDeleting ? 'Deleting…' : 'Yes, Delete Service'}
           </button>
         </div>
       </div>

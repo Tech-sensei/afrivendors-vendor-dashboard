@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { X, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { VendorAppointment } from '@/data/appointments';
+import { VendorAppointment } from '@/types/appointments';
 import { useMobile } from '@/hooks/useMobile';
 
 interface Message {
@@ -26,7 +26,7 @@ export function MessageDrawer({ isOpen, onClose, appointment }: MessageDrawerPro
     {
       id: '1',
       sender: 'customer',
-      text: `Hi! I'm looking forward to my ${appointment?.serviceName} appointment. Do you have parking available?`,
+      text: `Hi! I'm looking forward to my ${appointment?.services[0]?.serviceName ?? 'your service'} appointment. Do you have parking available?`,
       timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24)
     },
     {
@@ -128,7 +128,7 @@ export function MessageDrawer({ isOpen, onClose, appointment }: MessageDrawerPro
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center shrink-0">
                   <span className="font-unbounded text-sm font-semibold text-white">
-                    {appointment.customerInitials}
+                    {appointment.user.firstName[0]}{appointment.user.lastName[0]}
                   </span>
                 </div>
                 <div>
@@ -136,7 +136,7 @@ export function MessageDrawer({ isOpen, onClose, appointment }: MessageDrawerPro
                     {appointment.customerName}
                   </p>
                   <p className="font-unageo text-[13px] text-accent-60">
-                    {appointment.serviceName}
+                    {appointment.services[0]?.serviceName}
                   </p>
                 </div>
               </div>

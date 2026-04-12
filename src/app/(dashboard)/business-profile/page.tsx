@@ -1,9 +1,10 @@
-
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { toast } from 'sonner';
-import { initialProfile, BusinessProfile } from '@/data/business-profile';
+import { BusinessProfile } from '@/data/business-profile';
+import { useAppSelector } from '@/store/hooks';
+import { useVendorGallery } from '@/services/useVendorGallery';
 
 // Components
 import { ProfileHeader } from '@/components/business-profile/ProfileHeader';
@@ -18,41 +19,104 @@ import { EditProfileDrawer } from '@/components/business-profile/EditProfileDraw
 
 type DrawerType = 'basic' | 'description' | 'gallery' | 'location' | 'contact' | 'hours' | null;
 
+// ─── Map API opening hours array → BusinessProfile opening hours dict ─────────
+
+function mapOpeningHours(
+  apiHours: { day: string; isOpen: boolean; openTime: string | null; closeTime: string | null }[]
+): BusinessProfile['openingHours'] {
+  const result: BusinessProfile['openingHours'] = {};
+  for (const entry of apiHours) {
+    // strip seconds from "09:00:00" → "09:00"
+    const open = entry.openTime ? entry.openTime.slice(0, 5) : '09:00';
+    const close = entry.closeTime ? entry.closeTime.slice(0, 5) : '17:00';
+    result[entry.day.toLowerCase()] = { isOpen: entry.isOpen, open, close };
+  }
+  return result;
+}
+
+// ─── Map Redux VendorProfile → BusinessProfile ────────────────────────────────
+
+function mapToBusinessProfile(reduxProfile: ReturnType<typeof useAppSelector<any>> | null): BusinessProfile | null {
+  if (!reduxProfile) return null;
+
+  const { vendor, kyc, openingHours, gallery } = reduxProfile;
+
+  const bannerImage =
+    gallery?.find((g: any) => g.isBanner)?.imageUrl ??
+    kyc?.bannerImage ??
+    '';
+
+  const galleryImages: string[] = (gallery ?? []).map((g: any) => g.imageUrl);
+
+  return {
+    businessName: kyc?.businessName ?? '',
+    ownerName: `${vendor?.firstName ?? ''} ${vendor?.lastName ?? ''}`.trim(),
+    category: kyc?.category?.name ?? '',
+    description: kyc?.aboutBusiness ?? '',
+    logo: bannerImage,
+    bannerImage,
+    gallery: galleryImages,
+    address: kyc?.location ?? '',
+    city: '',
+    state: '',
+    zipCode: '',
+    phone: vendor?.phoneNumber ?? '',
+    email: vendor?.email ?? '',
+    website: kyc?.website ?? '',
+    openingHours: mapOpeningHours(openingHours ?? []),
+    socialLinks: {},
+  };
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function BusinessProfilePage() {
-  const [profile, setProfile] = useState<BusinessProfile>(initialProfile);
+  const reduxProfile = useAppSelector((state) => state.auth.profile);
+  const { uploadAsync, isUploading, deleteAsync, setBannerAsync } = useVendorGallery();
+
+  const initialData = useMemo(() => mapToBusinessProfile(reduxProfile), [reduxProfile]);
+
+  const [profile, setProfile] = useState<BusinessProfile | null>(null);
   const [activeDrawer, setActiveDrawer] = useState<DrawerType>(null);
   const [editingData, setEditingData] = useState<any>({});
   const [isSaving, setIsSaving] = useState(false);
 
+  // Use Redux data as source; local state overrides once user has made edits
+  const displayProfile = profile ?? initialData;
+
+  // Gallery items from Redux (have IDs needed for API calls)
+  const galleryItems = reduxProfile?.gallery ?? [];
+
   const openDrawer = (type: DrawerType) => {
+    if (!displayProfile) return;
     switch (type) {
       case 'basic':
         setEditingData({
-          businessName: profile.businessName,
-          ownerName: profile.ownerName,
-          category: profile.category
+          businessName: displayProfile.businessName,
+          ownerName: displayProfile.ownerName,
+          category: displayProfile.category,
         });
         break;
       case 'description':
-        setEditingData({ description: profile.description });
+        setEditingData({ description: displayProfile.description });
         break;
       case 'location':
         setEditingData({
-          address: profile.address,
-          city: profile.city,
-          state: profile.state,
-          zipCode: profile.zipCode
+          address: displayProfile.address,
+          city: displayProfile.city,
+          state: displayProfile.state,
+          zipCode: displayProfile.zipCode,
         });
         break;
       case 'contact':
         setEditingData({
-          phone: profile.phone,
-          email: profile.email,
-          website: profile.website
+          phone: displayProfile.phone,
+          email: displayProfile.email,
+          website: displayProfile.website,
         });
         break;
       case 'hours':
-        setEditingData({ openingHours: { ...profile.openingHours } });
+        setEditingData({ openingHours: { ...displayProfile.openingHours } });
         break;
     }
     setActiveDrawer(type);
@@ -64,17 +128,17 @@ export default function BusinessProfilePage() {
   };
 
   const handleSave = () => {
-    setProfile(prev => ({ ...prev, ...editingData }));
+    setProfile((prev) => ({ ...(prev ?? initialData!), ...editingData }));
     toast.success('Changes saved successfully!');
     closeDrawer();
   };
 
   const handleSaveAll = () => {
     setIsSaving(true);
-    // Simulate API call
+    // TODO: wire to PATCH /vendor/kyc or equivalent endpoint
     setTimeout(() => {
-        setIsSaving(false);
-        toast.success('All changes saved to server!');
+      setIsSaving(false);
+      toast.success('All changes saved to server!');
     }, 1000);
   };
 
@@ -82,79 +146,74 @@ export default function BusinessProfilePage() {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.onchange = (e: Event) => {
+    input.onchange = async (e: Event) => {
       const target = e.target as HTMLInputElement;
       const file = target.files?.[0];
       if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const imageUrl = event.target?.result as string;
-          setProfile((prev) => ({
-            ...prev,
-            gallery: [...prev.gallery, imageUrl]
-          }));
-          toast.success('Image added to gallery!');
-        };
-        reader.readAsDataURL(file);
+        await uploadAsync(file);
+        // Gallery refreshed via fetchUserProfile inside the hook
       }
     };
     input.click();
   };
 
-  const handleRemoveGalleryImage = (index: number) => {
-    setProfile((prev) => ({
-      ...prev,
-      gallery: prev.gallery.filter((_, i) => i !== index)
-    }));
-    toast.error('Image removed from gallery');
+  const handleSetBanner = async (id: number) => {
+    await setBannerAsync(id);
+    // Redux state refreshed inside hook — clear local override so banner updates
+    setProfile(null);
   };
 
-
-  const handleSetBannerImage = (imageUrl: string) => {
-    setProfile((prev) => ({ ...prev, bannerImage: imageUrl }));
-    toast.success('Banner image updated successfully!');
+  const handleRemoveImage = async (id: number) => {
+    await deleteAsync(id);
+    // Redux state refreshed inside hook — clear local override
+    setProfile(null);
   };
+
+  if (!displayProfile) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-accent-60 font-unageo">Loading profile...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="">
-      <ProfileHeader 
-        onSave={handleSaveAll} 
-        isSaving={isSaving}
-      />
+      <ProfileHeader onSave={handleSaveAll} isSaving={isSaving} />
 
       <div className="space-y-8">
-        <BannerSection bannerImage={profile.bannerImage} />
+        <BannerSection bannerImage={displayProfile.bannerImage} />
 
-        <BasicInfoCard 
-          profile={profile} 
-          onEdit={() => openDrawer('basic')} 
+        <BasicInfoCard
+          profile={displayProfile}
+          onEdit={() => openDrawer('basic')}
         />
 
-        <DescriptionCard 
-          description={profile.description} 
-          onEdit={() => openDrawer('description')} 
+        <DescriptionCard
+          description={displayProfile.description}
+          onEdit={() => openDrawer('description')}
         />
 
+        <LocationCard
+          profile={displayProfile}
+          onEdit={() => openDrawer('location')}
+        />
 
-          <LocationCard
-            profile={profile}
-            onEdit={() => openDrawer('location')}
-          />
-          
-          <ContactCard
-            profile={profile}
-            onEdit={() => openDrawer('contact')}
-          />
-      
-        <ProfileGallery 
-          profile={profile}
-          onUploadGallery={handleGalleryUpload}
-          onSetBanner={handleSetBannerImage}
-          onRemoveImage={handleRemoveGalleryImage}
+        <ContactCard
+          profile={displayProfile}
+          onEdit={() => openDrawer('contact')}
+        />
+
+        <ProfileGallery
+          items={galleryItems}
+          onUpload={handleGalleryUpload}
+          onSetBanner={handleSetBanner}
+          onRemove={handleRemoveImage}
+          isUploading={isUploading}
         />
 
         <HoursCard
-          openingHours={profile.openingHours}
+          openingHours={displayProfile.openingHours}
           onEdit={() => openDrawer('hours')}
         />
       </div>
@@ -170,4 +229,3 @@ export default function BusinessProfilePage() {
     </div>
   );
 }
-

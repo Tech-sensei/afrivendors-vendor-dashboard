@@ -13,9 +13,10 @@ interface LogoutConfirmModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
+  isLoading?: boolean;
 }
 
-export function LogoutConfirmModal({ open, onOpenChange, onConfirm }: LogoutConfirmModalProps) {
+export function LogoutConfirmModal({ open, onOpenChange, onConfirm, isLoading }: LogoutConfirmModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-white rounded-3xl border border-accent-20 max-w-[calc(100%-3rem)] sm:max-w-110 p-6 sm:p-8 [&>button]:top-6 [&>button]:right-6 [&>button]:size-6 [&>button]:opacity-100">
@@ -33,9 +34,10 @@ export function LogoutConfirmModal({ open, onOpenChange, onConfirm }: LogoutConf
         <DialogFooter className="flex-col gap-3 sm:flex-col mt-6">
           <Button
             onClick={onConfirm}
-            className="w-full h-12 bg-primary-100 text-white rounded-full text-base font-semibold border-none cursor-pointer hover:bg-primary-100/90"
+            disabled={isLoading}
+            className="w-full h-12 bg-primary-100 text-white rounded-full text-base font-semibold border-none cursor-pointer hover:bg-primary-100/90 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Yes, Log Out
+            {isLoading ? 'Signing out...' : 'Yes, Log Out'}
           </Button>
           <Button
             variant="outline"

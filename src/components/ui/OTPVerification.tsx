@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { X, Smartphone, CheckCircle2, Loader2 } from "lucide-react";
+import { X, Mail, CheckCircle2, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 
@@ -8,11 +8,27 @@ interface OTPVerificationProps {
   open: boolean;
   onClose: () => void;
   onVerify: () => void;
-  phoneNumber: string;
-  phoneCode: string;
+  // Email verification mode
+  email?: string;
+  verifyFn?: (code: string) => Promise<void>;
+  resendFn?: () => Promise<void>;
+  isResending?: boolean;
+  // Legacy phone verification mode
+  phoneNumber?: string;
+  phoneCode?: string;
 }
 
-export function OTPVerification({ open, onClose, onVerify, phoneNumber, phoneCode }: OTPVerificationProps) {
+export function OTPVerification({
+  open,
+  onClose,
+  onVerify,
+  email,
+  verifyFn,
+  resendFn,
+  isResending,
+  phoneNumber,
+  phoneCode,
+}: OTPVerificationProps) {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [isVerifying, setIsVerifying] = useState(false);
   const [canResend, setCanResend] = useState(false);
@@ -37,25 +53,21 @@ export function OTPVerification({ open, onClose, onVerify, phoneNumber, phoneCod
       setCountdown(60);
       setCanResend(false);
       setIsSuccess(false);
-      // Focus first input after a short delay
       setTimeout(() => inputRefs.current[0]?.focus(), 100);
     }
   }, [open]);
 
   const handleChange = (index: number, value: string) => {
-    // Only allow numbers
     if (value && !/^\d$/.test(value)) return;
 
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
 
-    // Auto-focus next input
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
 
-    // Auto-verify when all 6 digits are entered
     if (newOtp.every((digit) => digit !== "") && index === 5) {
       handleVerify(newOtp.join(""));
     }
@@ -63,7 +75,6 @@ export function OTPVerification({ open, onClose, onVerify, phoneNumber, phoneCod
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Backspace" && !otp[index] && index > 0) {
-      // Move to previous input on backspace if current is empty
       inputRefs.current[index - 1]?.focus();
     }
   };
@@ -77,11 +88,9 @@ export function OTPVerification({ open, onClose, onVerify, phoneNumber, phoneCod
     while (newOtp.length < 6) newOtp.push("");
     setOtp(newOtp);
 
-    // Focus the next empty input or the last one
     const nextIndex = Math.min(pastedData.length, 5);
     inputRefs.current[nextIndex]?.focus();
 
-    // Auto-verify if all 6 digits are pasted
     if (pastedData.length === 6) {
       handleVerify(pastedData);
     }
@@ -95,21 +104,21 @@ export function OTPVerification({ open, onClose, onVerify, phoneNumber, phoneCod
     }
 
     setIsVerifying(true);
+    try {
+      if (verifyFn) {
+        // Real API verification
+        await verifyFn(otpCode);
+      }
+      setIsSuccess(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    // For demo purposes, accept any 6-digit code
-    // In production, validate against backend
-    setIsVerifying(false);
-    setIsSuccess(true);
-    toast.success("Phone number verified successfully!");
-
-    // Close modal and proceed after success animation
-    setTimeout(() => {
-      onVerify();
-      onClose();
-    }, 1500);
+      setTimeout(() => {
+        onVerify();
+        onClose();
+      }, 1500);
+    } catch {
+      // error toast handled by caller
+      setIsVerifying(false);
+    }
   };
 
   const handleResend = async () => {
@@ -120,10 +129,21 @@ export function OTPVerification({ open, onClose, onVerify, phoneNumber, phoneCod
     setOtp(["", "", "", "", "", ""]);
     inputRefs.current[0]?.focus();
 
-    // Simulate sending OTP
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    toast.success("Verification code resent!");
+    try {
+      if (resendFn) {
+        await resendFn();
+      } else {
+        toast.success("Verification code resent!");
+      }
+    } catch {
+      // error toast handled by caller
+    }
   };
+
+  const isEmailMode = !!email;
+  const targetDescription = isEmailMode
+    ? email
+    : `${phoneCode} ${phoneNumber}`;
 
   if (!open) return null;
 
@@ -137,11 +157,10 @@ export function OTPVerification({ open, onClose, onVerify, phoneNumber, phoneCod
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            // onClick={onClose}
             className="fixed inset-0 bg-secondary-000/40 backdrop-blur-sm z-9998 flex items-center justify-center"
           />
 
-          {/* Modal Container - Centered */}
+          {/* Modal Container */}
           <div className="fixed inset-0 flex items-center justify-center z-9999 pointer-events-none p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -167,17 +186,21 @@ export function OTPVerification({ open, onClose, onVerify, phoneNumber, phoneCod
                       isSuccess ? "bg-green-100" : "bg-secondary-700"
                     }`}
                   >
-                    {isSuccess ? <CheckCircle2 className="h-8 w-8 text-green-600" /> : <Smartphone className="h-8 w-8 text-primary-100" />}
+                    {isSuccess ? (
+                      <CheckCircle2 className="h-8 w-8 text-green-600" />
+                    ) : (
+                      <Mail className="h-8 w-8 text-primary-100" />
+                    )}
                   </div>
 
                   <h2 className="font-unbounded text-2xl font-semibold text-secondary-000 mb-2">
-                    {isSuccess ? "Verified!" : "Verify Your Phone"}
+                    {isSuccess ? "Verified!" : "Verify Your Email"}
                   </h2>
 
                   <p className="text-sm text-accent-80 leading-6">
                     {isSuccess
-                      ? "Your phone number has been verified successfully"
-                      : `We've sent a 6-digit code to ${phoneCode} ${phoneNumber}`}
+                      ? "Your email has been verified successfully"
+                      : `We've sent a 6-digit code to ${targetDescription}`}
                   </p>
                 </div>
 
@@ -233,12 +256,16 @@ export function OTPVerification({ open, onClose, onVerify, phoneNumber, phoneCod
                       <p className="text-sm text-accent-80 mb-2">Didn't receive the code?</p>
                       <button
                         onClick={handleResend}
-                        disabled={!canResend}
-                        className={`bg-none border-none font-semibold text-sm transition-all duration-200 ease-out ${
-                          canResend ? "text-primary-100 cursor-pointer hover:underline" : "text-accent-80 cursor-not-allowed"
+                        disabled={!canResend || isResending}
+                        className={`bg-transparent border-none font-semibold text-sm transition-all duration-200 ease-out ${
+                          canResend && !isResending ? "text-primary-100 cursor-pointer hover:underline" : "text-accent-80 cursor-not-allowed"
                         }`}
                       >
-                        {canResend ? "Resend Code" : `Resend in ${countdown}s`}
+                        {isResending
+                          ? "Resending..."
+                          : canResend
+                          ? "Resend Code"
+                          : `Resend in ${countdown}s`}
                       </button>
                     </div>
                   </>

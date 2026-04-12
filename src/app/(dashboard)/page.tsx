@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, Suspense, lazy } from 'react';
-import { 
-  statsBreakdown, 
-  earningsData, 
-  upcomingAppointments, 
+import { useAppSelector } from '@/store/hooks';
+import {
+  statsBreakdown,
+  earningsData,
+  upcomingAppointments,
   recentMessages,
   StatsBreakdown
 } from '@/data/dashboard';
@@ -23,7 +24,13 @@ const RecentMessages = lazy(() => import('@/components/dashboard/RecentMessages'
 const BusinessRatingCard = lazy(() => import('@/components/dashboard/BusinessRatingCard').then(mod => ({ default: mod.BusinessRatingCard })));
 
 export default function DashboardPage() {
+  const { profile } = useAppSelector((state) => state.auth);
   const [timeFilter, setTimeFilter] = useState<keyof StatsBreakdown>('weekly');
+
+  const displayName =
+    profile?.kyc?.businessName ||
+    `${profile?.vendor?.firstName ?? ''} ${profile?.vendor?.lastName ?? ''}`.trim() ||
+    'Vendor';
 
   return (
       <div className="max-w-360 mx-auto">
@@ -31,7 +38,7 @@ export default function DashboardPage() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-12">
           <div>
             <h1 className="font-unbounded text-3xl md:text-3xl font-bold text-secondary-000 tracking-tight mb-2">
-             Welcome back, Zuri!
+             Welcome back, {displayName}!
             </h1>
             <p className="font-unageo text-zinc-500 text-base md:text-lg">
               Here&apos;s a quick snapshot of your business performance today.

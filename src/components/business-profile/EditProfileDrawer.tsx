@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { X, Save, Facebook, Instagram, Twitter, Linkedin } from 'lucide-react';
+import { X, Save } from 'lucide-react';
 import { BusinessProfile, businessCategories } from '@/data/business-profile';
 
 type DrawerType = 'basic' | 'description' | 'gallery' | 'location' | 'contact' | 'hours' | null;

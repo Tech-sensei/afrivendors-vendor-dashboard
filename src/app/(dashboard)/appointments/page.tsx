@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from 'react';
-import { XCircle, AlertCircle, CheckCircle } from 'lucide-react';
+import { XCircle, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-// Data & Types
-import { mockAppointments, VendorAppointment, AppointmentStatus } from '@/data/appointments';
+import { useVendorAppointments, useUpdateAppointmentStatus } from '@/services/useVendorAppointments';
+import type { VendorAppointment } from '@/types/appointments';
 
-// Components
 import { AppointmentTabs, AppointmentTabType } from '@/components/appointments/AppointmentTabs';
 import { AppointmentFilters, AppointmentFiltersState } from '@/components/appointments/AppointmentFilters';
 import { AppointmentCard } from '@/components/appointments/AppointmentCard';
@@ -17,186 +16,129 @@ import { MessageDrawer } from '@/components/appointments/MessageDrawer';
 import { CancelAppointmentDrawer } from '@/components/appointments/CancelAppointmentDrawer';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
+// Map UI tab names → API status values
+const TAB_STATUS_MAP: Record<AppointmentTabType, VendorAppointment['status']> = {
+  pending:   'pending',
+  upcoming:  'accepted',
+  past:      'completed',
+  cancelled: 'rejected',
+};
+
 export default function VendorAppointments() {
-  const [activeTab, setActiveTab] = useState<AppointmentTabType>('upcoming');
-  const [appointments, setAppointments] = useState<VendorAppointment[]>(mockAppointments);
+  const [activeTab, setActiveTab]         = useState<AppointmentTabType>('upcoming');
   const [selectedAppointment, setSelectedAppointment] = useState<VendorAppointment | null>(null);
-  
-  // Drawer States
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
-  const [isMessageOpen, setIsMessageOpen] = useState(false);
-  const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
-  const [isRejectConfirmOpen, setIsRejectConfirmOpen] = useState(false);
-  const [isAcceptConfirmOpen, setIsAcceptConfirmOpen] = useState(false);
+
+  const [isDetailsOpen,           setIsDetailsOpen]           = useState(false);
+  const [isRescheduleOpen,        setIsRescheduleOpen]        = useState(false);
+  const [isMessageOpen,           setIsMessageOpen]           = useState(false);
+  const [isCancelConfirmOpen,     setIsCancelConfirmOpen]     = useState(false);
+  const [isRejectConfirmOpen,     setIsRejectConfirmOpen]     = useState(false);
+  const [isAcceptConfirmOpen,     setIsAcceptConfirmOpen]     = useState(false);
   const [isMarkCompleteConfirmOpen, setIsMarkCompleteConfirmOpen] = useState(false);
-  
+
   const [filters, setFilters] = useState<AppointmentFiltersState>({
-    search: '',
-    category: 'all',
-    status: 'all'
+    search: '', category: 'all', status: 'all',
   });
 
-  // Calculate counts
+  const { data: appointments = [], isLoading } = useVendorAppointments();
+  const { mutate: updateStatus, isPending: isUpdating } = useUpdateAppointmentStatus();
+
+  // Tab counts
   const counts: Record<AppointmentTabType, number> = {
-    upcoming: appointments.filter(a => a.status === 'upcoming').length,
-    pending: appointments.filter(a => a.status === 'pending').length,
-    past: appointments.filter(a => a.status === 'completed').length,
-    cancelled: appointments.filter(a => a.status === 'cancelled').length
+    pending:   appointments.filter(a => a.status === 'pending').length,
+    upcoming:  appointments.filter(a => a.status === 'accepted').length,
+    past:      appointments.filter(a => a.status === 'completed').length,
+    cancelled: appointments.filter(a => a.status === 'rejected').length,
   };
 
-  const getFilteredAppointments = () => {
-    // Map tab name to actual status value
-    const statusMap: Record<AppointmentTabType, AppointmentStatus> = {
-      'upcoming': 'upcoming',
-      'pending': 'pending',
-      'past': 'completed',
-      'cancelled': 'cancelled'
-    };
-    
-    let filtered = appointments.filter(apt => apt.status === statusMap[activeTab]);
-
-    // Apply filters
-    if (filters.search) {
-        const searchLower = filters.search.toLowerCase();
-        filtered = filtered.filter(apt => 
-            apt.customerName.toLowerCase().includes(searchLower) ||
-            apt.serviceName.toLowerCase().includes(searchLower) ||
-            apt.location.toLowerCase().includes(searchLower)
+  // Filtered list for current tab
+  const filteredAppointments = appointments
+    .filter(a => a.status === TAB_STATUS_MAP[activeTab])
+    .filter(a => {
+      if (filters.search) {
+        const q = filters.search.toLowerCase();
+        return (
+          a.customerName.toLowerCase().includes(q) ||
+          a.services.some(s => s.serviceName.toLowerCase().includes(q))
         );
-    }
+      }
+      return true;
+    })
+    .filter(a => {
+      if (filters.category !== 'all') {
+        return a.services.some(s =>
+          s.category.name.toLowerCase().includes(filters.category.toLowerCase())
+        );
+      }
+      return true;
+    });
 
-    if (filters.category !== 'all') {
-      filtered = filtered.filter(apt => 
-        apt.category.toLowerCase().includes(filters.category.toLowerCase()) ||
-        apt.category.toLowerCase() === filters.category.toLowerCase() // Handle exact matches for safety
-      );
-    }
+  // ── Helpers ────────────────────────────────────────────────────────────────
 
-    if (filters.status !== 'all') {
-      filtered = filtered.filter(apt => 
-        apt.paymentType === filters.status
-      );
-    }
-
-    return filtered;
-  };
-
-  const filteredAppointments = getFilteredAppointments();
-
-  // Handlers
-  const handleAcceptClick = (id: string) => {
+  const selectAndOpen = (id: number, openFn: () => void) => {
     const apt = appointments.find(a => a.id === id);
-    if (apt) {
-      setSelectedAppointment(apt);
-      setIsDetailsOpen(false);
-      setIsAcceptConfirmOpen(true);
-    }
+    if (apt) { setSelectedAppointment(apt); openFn(); }
   };
+
+  // ── Handlers ───────────────────────────────────────────────────────────────
+
+  const handleViewDetails   = (id: number) => selectAndOpen(id, () => setIsDetailsOpen(true));
+  const handleMessage       = (id: number) => selectAndOpen(id, () => setIsMessageOpen(true));
+  const handleReschedule    = (id: number) => selectAndOpen(id, () => setIsRescheduleOpen(true));
+
+  const handleAcceptClick   = (id: number) => selectAndOpen(id, () => { setIsDetailsOpen(false); setIsAcceptConfirmOpen(true); });
+  const handleRejectClick   = (id: number) => selectAndOpen(id, () => { setIsDetailsOpen(false); setIsRejectConfirmOpen(true); });
+  const handleMarkCompleteClick = (id: number) => selectAndOpen(id, () => { setIsDetailsOpen(false); setIsMarkCompleteConfirmOpen(true); });
+  const handleCancelClick   = () => { setIsDetailsOpen(false); setIsCancelConfirmOpen(true); };
 
   const handleConfirmAccept = () => {
     if (!selectedAppointment) return;
-    const id = selectedAppointment.id;
-    
-    setAppointments(prev =>
-      prev.map(apt => (apt.id === id ? { ...apt, status: 'upcoming' as const, paymentType: 'Pay After' as const } : apt))
+    updateStatus(
+      { id: selectedAppointment.id, status: 'accepted' },
+      {
+        onSuccess: () => { toast.success('Appointment accepted!'); setIsAcceptConfirmOpen(false); },
+        onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to accept'),
+      }
     );
-    setIsAcceptConfirmOpen(false);
-    toast.success(`Appointment accepted! Moved to Upcoming.`);
-  };
-
-  const handleRejectClick = (id: string) => {
-    const apt = appointments.find(a => a.id === id);
-    if (apt) {
-      setSelectedAppointment(apt);
-      setIsDetailsOpen(false);
-      setIsRejectConfirmOpen(true);
-    }
-  };
-
-  const handleMarkCompleteClick = (id: string) => {
-    const apt = appointments.find(a => a.id === id);
-    if (apt) {
-      setSelectedAppointment(apt);
-      setIsDetailsOpen(false);
-      setIsMarkCompleteConfirmOpen(true);
-    }
-  };
-
-  const handleConfirmMarkComplete = () => {
-    if (!selectedAppointment) return;
-    const id = selectedAppointment.id;
-    
-    setAppointments(prev =>
-      prev.map(apt => (apt.id === id ? { ...apt, status: 'completed' as const } : apt))
-    );
-    setIsMarkCompleteConfirmOpen(false);
-    toast.success('✅ Appointment completed! Moved to Past.');
-  };
-
-  const handleViewDetails = (id: string) => {
-    const apt = appointments.find(a => a.id === id);
-    if (apt) {
-      setSelectedAppointment(apt);
-      setIsDetailsOpen(true);
-    }
-  };
-
-  const handleMessage = (id: string) => {
-    const apt = appointments.find(a => a.id === id);
-    if (apt) {
-      setSelectedAppointment(apt);
-      setIsMessageOpen(true);
-    }
-  };
-
-  const handleReschedule = (id: string) => {
-    const apt = appointments.find(a => a.id === id);
-    if (apt) {
-      setSelectedAppointment(apt);
-      setIsRescheduleOpen(true);
-    }
-  };
-
-  const handleConfirmReschedule = (appointmentId: string, newDate: string, newTime: string, notes: string) => {
-    setAppointments(prev =>
-        prev.map(apt => (apt.id === appointmentId ? { ...apt, date: newDate || apt.date, time: newTime || apt.time } : apt))
-    );
-    setIsRescheduleOpen(false);
-    setIsDetailsOpen(false);
-    toast.success(`Appointment rescheduled successfully!`);
-  };
-
-  const handleCancelClick = () => {
-    setIsDetailsOpen(false);
-    setIsCancelConfirmOpen(true);
-  };
-
-  const handleConfirmCancel = (id: string) => {
-    const apt = appointments.find(a => a.id === id);
-    const requiresRefund = apt?.paymentType === 'Prepaid';
-    
-    setAppointments(prev =>
-      prev.map(apt => (apt.id === id ? { ...apt, status: 'cancelled' as const } : apt))
-    );
-    setIsCancelConfirmOpen(false);
-    
-    if (requiresRefund) {
-      toast.error(`Appointment cancelled. Refund initiated.`);
-    } else {
-      toast.error(`Appointment cancelled successfully.`);
-    }
   };
 
   const handleConfirmReject = () => {
     if (!selectedAppointment) return;
-    const id = selectedAppointment.id;
-    
-    setAppointments(prev =>
-      prev.map(apt => (apt.id === id ? { ...apt, status: 'cancelled' as const } : apt))
+    updateStatus(
+      { id: selectedAppointment.id, status: 'rejected' },
+      {
+        onSuccess: () => { toast.error('Booking request rejected.'); setIsRejectConfirmOpen(false); },
+        onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to reject'),
+      }
     );
-    setIsRejectConfirmOpen(false);
-    toast.error(`Booking request rejected.`);
+  };
+
+  const handleConfirmMarkComplete = () => {
+    if (!selectedAppointment) return;
+    updateStatus(
+      { id: selectedAppointment.id, status: 'completed' },
+      {
+        onSuccess: () => { toast.success('Appointment marked as completed!'); setIsMarkCompleteConfirmOpen(false); },
+        onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to complete'),
+      }
+    );
+  };
+
+  // Cancel reuses reject endpoint until a dedicated cancel endpoint is provided
+  const handleConfirmCancel = () => {
+    if (!selectedAppointment) return;
+    updateStatus(
+      { id: selectedAppointment.id, status: 'rejected' },
+      {
+        onSuccess: () => { toast.error('Appointment cancelled.'); setIsCancelConfirmOpen(false); },
+        onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to cancel'),
+      }
+    );
+  };
+
+  const handleConfirmReschedule = (_id: number, _date: string, _time: string, _notes: string) => {
+    setIsRescheduleOpen(false);
+    setIsDetailsOpen(false);
   };
 
   return (
@@ -211,18 +153,15 @@ export default function VendorAppointments() {
         </p>
       </div>
 
-      {/* Tabs */}
-      <AppointmentTabs 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
-        counts={counts}
-      />
-
-      {/* Filters */}
+      <AppointmentTabs activeTab={activeTab} setActiveTab={setActiveTab} counts={counts} />
       <AppointmentFilters onFilterChange={setFilters} />
 
-      {/* Appointments List */}
-      {filteredAppointments.length === 0 ? (
+      {/* List */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-24">
+          <Loader2 size={36} className="text-primary-100 animate-spin" />
+        </div>
+      ) : filteredAppointments.length === 0 ? (
         <div className="bg-white border border-accent-20/60 rounded-2xl p-20 text-center shadow-sm">
           <div className="w-20 h-20 bg-accent-10 rounded-full flex items-center justify-center mx-auto mb-6">
             <AlertCircle size={36} className="text-accent-40" />
@@ -231,13 +170,10 @@ export default function VendorAppointments() {
             No {activeTab} appointments
           </h3>
           <p className="font-unageo text-accent-60 max-w-sm mx-auto">
-            {activeTab === 'pending'
-              ? 'No new booking requests at the moment'
-              : activeTab === 'upcoming'
-              ? 'You have no upcoming appointments scheduled'
-              : activeTab === 'past'
-              ? 'No completed appointments to show'
-              : 'No cancelled appointments'}
+            {activeTab === 'pending'   ? 'No new booking requests at the moment' :
+             activeTab === 'upcoming'  ? 'You have no upcoming appointments scheduled' :
+             activeTab === 'past'      ? 'No completed appointments to show' :
+             'No cancelled appointments'}
           </p>
         </div>
       ) : (
@@ -262,12 +198,11 @@ export default function VendorAppointments() {
         isOpen={isDetailsOpen}
         onClose={() => setIsDetailsOpen(false)}
         appointment={selectedAppointment}
-        onMessage={() => handleMessage(selectedAppointment?.id || '')}
-        onReschedule={() => handleReschedule(selectedAppointment?.id || '')}
+        onMessage={() => handleMessage(selectedAppointment?.id ?? 0)}
         onCancel={handleCancelClick}
-        onMarkComplete={() => handleMarkCompleteClick(selectedAppointment?.id || '')}
-        onAccept={() => handleAcceptClick(selectedAppointment?.id || '')}
-        onReject={() => handleRejectClick(selectedAppointment?.id || '')}
+        onMarkComplete={() => handleMarkCompleteClick(selectedAppointment?.id ?? 0)}
+        onAccept={() => handleAcceptClick(selectedAppointment?.id ?? 0)}
+        onReject={() => handleRejectClick(selectedAppointment?.id ?? 0)}
       />
 
       <RescheduleDrawer
@@ -290,45 +225,45 @@ export default function VendorAppointments() {
         onConfirm={handleConfirmCancel}
       />
 
-      {/* Reuse ConfirmModal for Rejection */}
+      {/* Reject Confirmation */}
       <ConfirmModal
         open={isRejectConfirmOpen}
         onOpenChange={setIsRejectConfirmOpen}
         onConfirm={handleConfirmReject}
         title="Reject Booking Request?"
-        description={`Are you sure you want to reject the booking request from ${selectedAppointment?.customerName}? This action cannot be undone.`}
-        confirmText="Yes, Reject Request"
-        cancelText="No, Keep Request"
+        description={`Are you sure you want to reject the booking from ${selectedAppointment?.customerName}? This cannot be undone.`}
+        confirmText={isUpdating ? 'Rejecting…' : 'Yes, Reject'}
+        cancelText="No, Keep"
         icon={XCircle}
         iconColor="text-red-600"
         iconBg="bg-red-50"
         confirmButtonVariant="destructive"
       />
 
-      {/* Accept Confirmation Modal */}
+      {/* Accept Confirmation */}
       <ConfirmModal
         open={isAcceptConfirmOpen}
         onOpenChange={setIsAcceptConfirmOpen}
         onConfirm={handleConfirmAccept}
         title="Accept Booking Request?"
-        description={`Are you sure you want to accept the booking request from ${selectedAppointment?.customerName}? This will move the appointment to your upcoming appointments.`}
-        confirmText="Yes, Accept Request"
-        cancelText="No, Cancel"
+        description={`Accept the booking from ${selectedAppointment?.customerName}? It will move to Upcoming.`}
+        confirmText={isUpdating ? 'Accepting…' : 'Yes, Accept'}
+        cancelText="Cancel"
         icon={CheckCircle}
         iconColor="text-primary-100"
         iconBg="bg-primary-100/10"
         confirmButtonVariant="default"
       />
 
-      {/* Mark Complete Confirmation Modal */}
+      {/* Mark Complete Confirmation */}
       <ConfirmModal
         open={isMarkCompleteConfirmOpen}
         onOpenChange={setIsMarkCompleteConfirmOpen}
         onConfirm={handleConfirmMarkComplete}
-        title="Mark Appointment as Complete?"
-        description={`Are you sure you want to mark the appointment with ${selectedAppointment?.customerName} as completed? This will move it to your past appointments.`}
-        confirmText="Yes, Mark Complete"
-        cancelText="No, Cancel"
+        title="Mark as Completed?"
+        description={`Mark the appointment with ${selectedAppointment?.customerName} as completed?`}
+        confirmText={isUpdating ? 'Saving…' : 'Yes, Complete'}
+        cancelText="Cancel"
         icon={CheckCircle}
         iconColor="text-primary-100"
         iconBg="bg-primary-100/10"

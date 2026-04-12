@@ -1,18 +1,27 @@
 "use client";
 
 import React from "react";
-import { Calendar, Clock, DollarSign, MapPin, CheckCircle, XCircle, MessageSquare, Eye, Edit } from 'lucide-react';
-import { VendorAppointment, AppointmentStatus } from "@/data/appointments";
+import { Calendar, Clock, PoundSterling, CheckCircle, XCircle, MessageSquare, Eye } from 'lucide-react';
+import { format, parseISO } from "date-fns";
+import type { VendorAppointment } from "@/types/appointments";
 
 interface AppointmentCardProps {
   appointment: VendorAppointment;
-  onViewDetails?: (id: string) => void;
-  onAccept?: (id: string) => void;
-  onReject?: (id: string) => void;
-  onReschedule?: (id: string) => void;
-  onMarkComplete?: (id: string) => void;
-  onMessage?: (id: string) => void;
+  onViewDetails?: (id: number) => void;
+  onAccept?: (id: number) => void;
+  onReject?: (id: number) => void;
+  onReschedule?: (id: number) => void;
+  onMarkComplete?: (id: number) => void;
+  onMessage?: (id: number) => void;
 }
+
+const STATUS_CONFIG = {
+  pending:   { label: 'Pending',   color: 'text-amber-600', bg: 'bg-amber-50' },
+  accepted:  { label: 'Upcoming',  color: 'text-blue-600',  bg: 'bg-blue-50' },
+  completed: { label: 'Completed', color: 'text-green-600', bg: 'bg-green-50' },
+  rejected:  { label: 'Rejected',  color: 'text-red-600',   bg: 'bg-red-50' },
+};
+
 
 export function AppointmentCard({
   appointment,
@@ -21,22 +30,21 @@ export function AppointmentCard({
   onReject,
   onReschedule,
   onMarkComplete,
-  onMessage
+  onMessage,
 }: AppointmentCardProps) {
-  const isPending = appointment.status === 'pending';
-  const isUpcoming = appointment.status === 'upcoming';
-  const isCompleted = appointment.status === 'completed';
-  const isCancelled = appointment.status === 'cancelled';
+  const isPending   = appointment.status === 'pending';
+  const isAccepted  = appointment.status === 'accepted';
 
-  // Status Badge Config
-  const statusConfig: Record<AppointmentStatus, { label: string; color: string; bg: string }> = {
-    pending: { label: 'Pending', color: 'text-amber-600', bg: 'bg-amber-50' },
-    upcoming: { label: 'Upcoming', color: 'text-blue-600', bg: 'bg-blue-50' },
-    completed: { label: 'Completed', color: 'text-green-600', bg: 'bg-green-50' },
-    cancelled: { label: 'Cancelled', color: 'text-red-600', bg: 'bg-red-50' }
-  };
+  const status = STATUS_CONFIG[appointment.status];
 
-  const status = statusConfig[appointment.status];
+  const initials = `${appointment.user.firstName[0]}${appointment.user.lastName[0]}`;
+  const primaryService = appointment.services[0];
+  const displayTime = appointment.time.slice(0, 5);
+  const totalDuration = appointment.services.map(s => s.duration).join(' + ');
+
+  const displayServiceName = appointment.services.length === 1
+    ? primaryService?.serviceName
+    : `${primaryService?.serviceName} +${appointment.services.length - 1} more`;
 
   return (
     <div
@@ -46,9 +54,13 @@ export function AppointmentCard({
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          {/* Customer Avatar - Circular */}
+          {/* Customer Avatar */}
           <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center shrink-0 text-white font-unbounded text-base font-bold shadow-sm">
-             {appointment.customerInitials}
+            {appointment.user.profilePhoto ? (
+              <img src={appointment.user.profilePhoto} alt={appointment.customerName} className="w-full h-full rounded-full object-cover" />
+            ) : (
+              initials
+            )}
           </div>
 
           {/* Customer & Service Info */}
@@ -57,60 +69,47 @@ export function AppointmentCard({
               {appointment.customerName}
             </h4>
             <p className="font-unageo text-sm text-accent-60 truncate mb-1">
-              {appointment.serviceName}
+              {displayServiceName}
             </p>
             <span className="inline-block px-2 py-0.5 rounded-md bg-accent-10 text-accent-60 font-unageo text-xs font-medium">
-              {appointment.category}
+              {primaryService?.category.name}
             </span>
           </div>
         </div>
 
-        {/* Status Badge - Pill */}
-        <span className={`inline-flex items-center px-3 py-1 rounded-full font-unageo text-xs font-bold ${status.bg} ${status.color} whitespace-nowrap`}>
-          {status.label}
-        </span>
+        {/* Status badge */}
+        <div className="shrink-0 ml-3">
+          <span className={`inline-flex items-center px-3 py-1 rounded-full font-unageo text-xs font-bold ${status.bg} ${status.color}`}>
+            {status.label}
+          </span>
+        </div>
       </div>
 
-      {/* Appointment Details Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-        {/* Date & Time */}
+      {/* Appointment Details */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
         <div className="flex items-center gap-2">
-          <Calendar size={16} className="text-accent-80" />
-          <span className="font-unageo text-sm text-accent-80">
-            {appointment.date} at {appointment.time}
+          <Calendar size={15} className="text-accent-60 shrink-0" />
+          <span className="font-unageo text-sm font-semibold text-secondary-000">
+            {format(parseISO(appointment.date), "MMM d, yyyy")}
           </span>
         </div>
-
-        {/* Duration */}
         <div className="flex items-center gap-2">
-          <Clock size={16} className="text-accent-80" />
-          <span className="font-unageo text-sm text-accent-80">
-            {appointment.duration}
+          <Clock size={15} className="text-accent-60 shrink-0" />
+          <span className="font-unageo text-sm font-semibold text-secondary-000">{displayTime} · {totalDuration}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <PoundSterling size={15} className="text-accent-60 shrink-0" />
+          <span className="font-unageo text-sm font-semibold text-secondary-000">
+            {appointment.totalAmount.toFixed(2)}
           </span>
-        </div>
-
-        {/* Price */}
-        <div className="flex items-center gap-2">
-          <DollarSign size={16} className="text-accent-80" />
-            <span className="font-unageo text-sm font-bold text-secondary-000">
-                ${appointment.price.toFixed(2)}
-            </span>
-            <span className="font-unageo text-xs text-accent-80">
-                ({appointment.paymentType})
-            </span>
-        </div>
-
-        {/* Location */}
-        <div className="flex items-center gap-2">
-           <MapPin size={16} className="text-accent-80" />
-           <span className="font-unageo text-sm text-accent-80 truncate">
-             {appointment.location}
-           </span>
+          <span className="font-unageo text-xs text-accent-60 capitalize">
+            via {appointment.paymentMethod}
+          </span>
         </div>
       </div>
 
       {/* Actions */}
-      <div 
+      <div
         className="flex flex-wrap gap-2 pt-4 border-t border-accent-10"
         onClick={(e) => e.stopPropagation()}
       >
@@ -133,25 +132,16 @@ export function AppointmentCard({
           </>
         )}
 
-        {isUpcoming && (
-          <>
-             <button
-              onClick={() => onMarkComplete?.(appointment.id)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-100 text-white font-unageo text-sm font-bold hover:opacity-90 transition-opacity shadow-sm"
-            >
-              <CheckCircle size={16} />
-              Mark Complete
-            </button>
-            <button
-              onClick={() => onReschedule?.(appointment.id)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-transparent border border-accent-20 text-secondary-000 font-unageo text-sm font-bold hover:bg-accent-10 transition-all"
-            >
-              <Edit size={16} />
-              Reschedule
-            </button>
-          </>
+        {isAccepted && (
+          <button
+            onClick={() => onMarkComplete?.(appointment.id)}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-100 text-white font-unageo text-sm font-bold hover:opacity-90 transition-opacity shadow-sm"
+          >
+            <CheckCircle size={16} />
+            Mark Complete
+          </button>
         )}
-        
+
         <button
           onClick={() => onMessage?.(appointment.id)}
           className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-transparent border border-accent-20 text-secondary-000 font-unageo text-sm font-bold hover:bg-accent-10 transition-all"
@@ -160,14 +150,13 @@ export function AppointmentCard({
           Message
         </button>
 
-         <button
+        <button
           onClick={() => onViewDetails?.(appointment.id)}
           className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-transparent border border-accent-20 text-secondary-000 font-unageo text-sm font-bold hover:bg-accent-10 transition-all"
         >
           <Eye size={16} />
           View Details
         </button>
-
       </div>
     </div>
   );

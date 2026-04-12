@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { X, Calendar, Clock, AlertTriangle, ArrowRight } from "lucide-react";
-import { VendorAppointment } from "@/data/appointments";
+import { VendorAppointment } from "@/types/appointments";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMobile } from "@/hooks/useMobile";
 
@@ -10,7 +10,7 @@ interface RescheduleDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   appointment: VendorAppointment | null;
-  onConfirm: (appointmentId: string, newDate: string, newTime: string, notes: string) => void;
+  onConfirm: (appointmentId: number, newDate: string, newTime: string, notes: string) => void;
 }
 
 export function RescheduleDrawer({ 

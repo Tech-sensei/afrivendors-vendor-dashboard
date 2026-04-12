@@ -1,100 +1,86 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { X, FileText, Tag, DollarSign, Clock, AlignLeft, Save, Image as ImageIcon } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, FileText, Tag, DollarSign, Clock, AlignLeft, Save, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { Service } from './ServiceCard';
 
 interface AddEditServiceDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   service: Service | null;
-  onSave: (serviceData: Partial<Service>) => void;
+  vendorCategory: string;
+  onSave: (payload: FormData, serviceId?: number) => Promise<void>;
+  isSaving?: boolean;
 }
 
-const DAYS_OF_WEEK = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
+interface FormState {
+  serviceName: string;
+  price: string;
+  duration: string;
+  description: string;
+  imageFile: File | null;
+}
 
-const CATEGORIES = [
-  'Massage Therapy',
-  'Facial Treatments',
-  'Hair Styling',
-  'Nails & Manicure',
-  'Body Treatments',
-  'Wellness & Spa',
-  'Makeup Services',
-  'Other'
-];
+const defaultForm: FormState = {
+  serviceName: '',
+  price: '',
+  duration: '',
+  description: '',
+  imageFile: null,
+};
 
-export function AddEditServiceDrawer({ isOpen, onClose, service, onSave }: AddEditServiceDrawerProps) {
-  const [formData, setFormData] = useState({
-    name: '',
-    category: '',
-    price: '',
-    duration: '',
-    description: '',
-    imageUrl: '',
-    availability: {
-      monday: true,
-      tuesday: true,
-      wednesday: true,
-      thursday: true,
-      friday: true,
-      saturday: false,
-      sunday: false
-    }
-  });
+export function AddEditServiceDrawer({ isOpen, onClose, service, vendorCategory, onSave, isSaving = false }: AddEditServiceDrawerProps) {
+  const [form, setForm] = useState<FormState>(defaultForm);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    if (!isOpen) return;
     if (service) {
-      setFormData({
-        name: service.name,
-        category: service.category,
+      setForm({
+        serviceName: service.serviceName,
         price: service.price,
         duration: service.duration,
         description: service.description,
-        imageUrl: service.imageUrl || '',
-        availability: { ...service.availability }
+        imageFile: null,
       });
+      setPreviewUrl(service.imageUrl);
     } else {
-      setFormData({
-        name: '',
-        category: '',
-        price: '',
-        duration: '',
-        description: '',
-        imageUrl: '',
-        availability: {
-          monday: true,
-          tuesday: true,
-          wednesday: true,
-          thursday: true,
-          friday: true,
-          saturday: false,
-          sunday: false
-        }
-      });
+      setForm(defaultForm);
+      setPreviewUrl(null);
     }
   }, [service, isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size exceeds 5MB limit');
+      return;
+    }
+    setForm((prev) => ({ ...prev, imageFile: file }));
+    setPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    const payload = new FormData();
+    payload.append('serviceName', form.serviceName);
+    payload.append('price', form.price);
+    payload.append('duration', form.duration);
+    if (form.description.trim()) {
+      payload.append('description', form.description);
+    }
+    if (form.imageFile) {
+      payload.append('image', form.imageFile);
+    }
+    await onSave(payload, service?.id);
   };
 
-  const toggleDay = (day: typeof DAYS_OF_WEEK[number]) => {
-    setFormData(prev => ({
-      ...prev,
-      availability: {
-        ...prev.availability,
-        [day]: !prev.availability[day]
-      }
-    }));
-  };
-
-  const isFormValid = formData.name.trim() !== '' && 
-                    formData.category !== '' && 
-                    formData.price !== '' && 
-                    formData.duration.trim() !== '' && 
-                    formData.description.trim() !== '';
+  const isFormValid =
+    form.serviceName.trim() !== '' &&
+    form.price !== '' &&
+    form.duration.trim() !== '';
 
   if (!isOpen) return null;
 
@@ -103,12 +89,12 @@ export function AddEditServiceDrawer({ isOpen, onClose, service, onSave }: AddEd
       {/* Overlay */}
       <div
         className="fixed inset-0 bg-[#231305]/40 backdrop-blur-[2px] z-50 transition-opacity duration-300 h-full"
-        onClick={onClose}
+        onClick={!isSaving ? onClose : undefined}
       />
 
       {/* Drawer */}
-      <div className={`fixed z-50 bg-white shadow-2xl transform transition-transform duration-300 ease-out flex flex-col max-sm:bottom-0 max-sm:left-0 max-sm:right-0 max-sm:h-[92vh] max-sm:rounded-t-[24px] max-sm:translate-y-0 sm:right-0 sm:top-0 sm:h-full sm:w-full sm:max-w-[560px] sm:rounded-l-[32px] sm:translate-x-0 overflow-hidden`}>
-        
+      <div className="fixed z-50 bg-white shadow-2xl transform transition-transform duration-300 ease-out flex flex-col max-sm:bottom-0 max-sm:left-0 max-sm:right-0 max-sm:h-[92vh] max-sm:rounded-t-[24px] max-sm:translate-y-0 sm:right-0 sm:top-0 sm:h-full sm:w-full sm:max-w-[560px] sm:rounded-l-[32px] sm:translate-x-0 overflow-hidden">
+
         {/* Header */}
         <div className="px-8 py-6 flex items-start justify-between flex-shrink-0">
           <div>
@@ -121,7 +107,8 @@ export function AddEditServiceDrawer({ isOpen, onClose, service, onSave }: AddEd
           </div>
           <button
             onClick={onClose}
-            className="p-2.5 rounded-xl bg-secondary-700 hover:bg-secondary-600 transition-all duration-200 cursor-pointer"
+            disabled={isSaving}
+            className="p-2.5 rounded-xl bg-secondary-700 hover:bg-secondary-600 transition-all duration-200 cursor-pointer disabled:opacity-50"
           >
             <X className="w-5 h-5 text-secondary-000" />
           </button>
@@ -130,7 +117,21 @@ export function AddEditServiceDrawer({ isOpen, onClose, service, onSave }: AddEd
         {/* Form Content */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar">
           <div className="px-8 pb-8 space-y-7">
-            
+
+            {/* Category — read-only from profile */}
+            <div className="space-y-2.5">
+              <label className="flex items-center gap-2 font-unageo text-sm font-semibold text-secondary-000">
+                <Tag className="w-4 h-4 text-primary-100" />
+                Category
+              </label>
+              <div className="w-full py-3.5 px-4 bg-secondary-700/60 border border-secondary-600 rounded-xl font-unageo text-[15px] text-accent-60 flex items-center gap-2">
+                <span>{vendorCategory || '—'}</span>
+                <span className="ml-auto text-[11px] font-medium text-accent-40 bg-secondary-700 px-2 py-0.5 rounded-md">
+                  From profile
+                </span>
+              </div>
+            </div>
+
             {/* Service Name */}
             <div className="space-y-2.5">
               <label className="flex items-center gap-2 font-unageo text-sm font-semibold text-secondary-000">
@@ -140,32 +141,11 @@ export function AddEditServiceDrawer({ isOpen, onClose, service, onSave }: AddEd
               <input
                 type="text"
                 required
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="e.g., Deep Tissue Massage"
-                className="w-full py-3.5 px-4 bg-white border border-secondary-600 rounded-xl font-unageo text-[15px] text-secondary-000 placeholder:text-accent-60 outline-none transition-all duration-200 focus:border-primary-100 focus:ring-4 focus:ring-primary-100/5 group"
+                value={form.serviceName}
+                onChange={(e) => setForm((p) => ({ ...p, serviceName: e.target.value }))}
+                placeholder="e.g., Proposal Decor Package"
+                className="w-full py-3.5 px-4 bg-white border border-secondary-600 rounded-xl font-unageo text-[15px] text-secondary-000 placeholder:text-accent-60 outline-none transition-all duration-200 focus:border-primary-100 focus:ring-4 focus:ring-primary-100/5"
               />
-            </div>
-
-            {/* Category */}
-            <div className="space-y-2.5">
-              <label className="flex items-center gap-2 font-unageo text-sm font-semibold text-secondary-000">
-                <Tag className="w-4 h-4 text-primary-100" />
-                Category <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <select
-                  required
-                  value={formData.category}
-                  onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                  className="w-full py-3.5 px-4 bg-white border border-secondary-600 rounded-xl font-unageo text-[15px] text-secondary-000 cursor-pointer outline-none transition-all duration-200 appearance-none bg-no-repeat bg-[right_16px_center] bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2212%22%20height%3D%228%22%20viewBox%3D%220%200%2012%208%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M1%201.5L6%206.5L11%201.5%22%20stroke%3D%22%232D2D2D%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] focus:border-primary-100 focus:ring-4 focus:ring-primary-100/5"
-                >
-                  <option value="" className="text-accent-60">Select a category</option>
-                  {CATEGORIES.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
             </div>
 
             {/* Price & Duration Row */}
@@ -173,7 +153,7 @@ export function AddEditServiceDrawer({ isOpen, onClose, service, onSave }: AddEd
               <div className="space-y-2.5">
                 <label className="flex items-center gap-2 font-unageo text-sm font-semibold text-secondary-000">
                   <DollarSign className="w-4 h-4 text-primary-100" />
-                  Price (USD) <span className="text-red-500">*</span>
+                  Price <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary-000 font-unageo text-[15px] font-medium">$</span>
@@ -182,8 +162,8 @@ export function AddEditServiceDrawer({ isOpen, onClose, service, onSave }: AddEd
                     step="0.01"
                     min="0"
                     required
-                    value={formData.price}
-                    onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                    value={form.price}
+                    onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))}
                     placeholder="0.00"
                     className="w-full py-3.5 px-4 pl-8 bg-white border border-secondary-600 rounded-xl font-unageo text-[15px] text-secondary-000 placeholder:text-accent-60 outline-none transition-all duration-200 focus:border-primary-100 focus:ring-4 focus:ring-primary-100/5"
                   />
@@ -197,9 +177,9 @@ export function AddEditServiceDrawer({ isOpen, onClose, service, onSave }: AddEd
                 <input
                   type="text"
                   required
-                  value={formData.duration}
-                  onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
-                  placeholder="e.g., 60 min"
+                  value={form.duration}
+                  onChange={(e) => setForm((p) => ({ ...p, duration: e.target.value }))}
+                  placeholder="e.g., 5 hours"
                   className="w-full py-3.5 px-4 bg-white border border-secondary-600 rounded-xl font-unageo text-[15px] text-secondary-000 placeholder:text-accent-60 outline-none transition-all duration-200 focus:border-primary-100 focus:ring-4 focus:ring-primary-100/5"
                 />
               </div>
@@ -209,122 +189,77 @@ export function AddEditServiceDrawer({ isOpen, onClose, service, onSave }: AddEd
             <div className="space-y-2.5">
               <label className="flex items-center gap-2 font-unageo text-sm font-semibold text-secondary-000">
                 <AlignLeft className="w-4 h-4 text-primary-100" />
-                Description <span className="text-red-500">*</span>
+                Description
               </label>
               <textarea
-                required
                 rows={5}
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                value={form.description}
+                onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
                 placeholder="Describe your service, what's included, and what makes it special..."
                 className="w-full py-4 px-4 bg-white border border-secondary-600 rounded-xl font-unageo text-[15px] text-secondary-000 placeholder:text-accent-60 outline-none transition-all duration-200 resize-none focus:border-primary-100 focus:ring-4 focus:ring-primary-100/5"
               />
             </div>
 
-            {/* Service Image Upload */}
+            {/* Service Image */}
             <div className="space-y-4">
               <label className="flex items-center gap-2 font-unageo text-sm font-semibold text-secondary-000">
                 <ImageIcon className="w-4 h-4 text-primary-100" />
                 Service Image
               </label>
-              
-              {!formData.imageUrl ? (
-                <div 
-                  onClick={() => document.getElementById('image-upload')?.click()}
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png, image/jpeg, image/webp"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+
+              {!previewUrl ? (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
                   className="w-full aspect-[2/1] border-2 border-dashed border-zinc-200 rounded-3xl bg-secondary-800/50 flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-primary-100 hover:bg-primary-100/5 transition-all group"
                 >
-                  <input
-                    id="image-upload"
-                    type="file"
-                    accept="image/png, image/jpeg"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        if (file.size > 5 * 1024 * 1024) {
-                          alert('File size exceeds 5MB limit');
-                          return;
-                        }
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                          setFormData(prev => ({ ...prev, imageUrl: event.target?.result as string }));
-                        };
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                  />
                   <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-sm border border-zinc-100 group-hover:scale-110 transition-transform">
                     <ImageIcon className="w-6 h-6 text-secondary-000" />
                   </div>
                   <div className="text-center">
-                    <p className="font-unageo text-base font-bold text-secondary-000">Click to upload or drag and drop</p>
-                    <p className="font-unageo text-sm text-accent-60">JPG or PNG (max 5MB)</p>
+                    <p className="font-unageo text-base font-bold text-secondary-000">Click to upload</p>
+                    <p className="font-unageo text-sm text-accent-60">JPG, PNG or WebP (max 5MB)</p>
                   </div>
                 </div>
               ) : (
                 <div className="relative w-full aspect-[21/9] rounded-3xl overflow-hidden group">
                   <img
-                    src={formData.imageUrl}
+                    src={previewUrl}
                     alt="Service Preview"
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
                     <button
                       type="button"
-                      onClick={() => document.getElementById('image-upload')?.click()}
+                      onClick={() => fileInputRef.current?.click()}
                       className="px-5 py-2.5 bg-white rounded-xl font-unageo text-sm font-bold text-secondary-000 hover:bg-zinc-100 transition-colors"
                     >
                       Change Image
                     </button>
                     <button
                       type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, imageUrl: '' }))}
+                      onClick={() => {
+                        setForm((p) => ({ ...p, imageFile: null }));
+                        setPreviewUrl(null);
+                      }}
                       className="px-5 py-2.5 bg-red-500 rounded-xl font-unageo text-sm font-bold text-white hover:bg-red-600 transition-colors"
                     >
                       Remove
                     </button>
                   </div>
-                  <input
-                    id="image-upload"
-                    type="file"
-                    accept="image/png, image/jpeg"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                          setFormData(prev => ({ ...prev, imageUrl: event.target?.result as string }));
-                        };
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                  />
                 </div>
               )}
-              <p className="font-unageo text-[13px] text-accent-80 leading-relaxed">
-                Upload a high-quality image that represents your service (JPG or PNG, max 5MB)
-              </p>
-            </div>
 
-            {/* Availability */}
-            <div className="space-y-3.5 pt-2">
-              <label className="flex items-center gap-2 font-unageo text-sm font-semibold text-secondary-000">
-                <Clock className="w-4 h-4 text-primary-100" />
-                Availability
-              </label>
-              <div className="flex flex-wrap gap-2.5">
-                {DAYS_OF_WEEK.map(day => (
-                  <button
-                    key={day}
-                    type="button"
-                    onClick={() => toggleDay(day)}
-                    className={`px-4 py-2.5 rounded-xl text-[13px] font-bold font-unageo transition-all duration-200 cursor-pointer ${formData.availability[day] ? 'bg-primary-100 text-white shadow-md shadow-primary-100/20' : 'bg-secondary-700 text-accent-80 border border-secondary-600 hover:border-secondary-100'}`}
-                  >
-                    {day.charAt(0).toUpperCase() + day.slice(1, 3)}
-                  </button>
-                ))}
-              </div>
+              <p className="font-unageo text-[13px] text-accent-80 leading-relaxed">
+                Upload a high-quality image that represents your service (JPG, PNG or WebP, max 5MB)
+              </p>
             </div>
           </div>
 
@@ -333,17 +268,18 @@ export function AddEditServiceDrawer({ isOpen, onClose, service, onSave }: AddEd
             <button
               type="button"
               onClick={onClose}
-                className="flex-1 py-4 px-6 bg-white border border-accent-20 text-secondary-000 font-unageo text-[15px] font-bold rounded-xl transition-all duration-200 hover:bg-secondary-700 hover:border-accent-40 cursor-pointer text-center shadow-sm"
+              disabled={isSaving}
+              className="flex-1 py-4 px-6 bg-white border border-accent-20 text-secondary-000 font-unageo text-[15px] font-bold rounded-xl transition-all duration-200 hover:bg-secondary-700 hover:border-accent-40 cursor-pointer text-center shadow-sm disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={!isFormValid}
-              className={`flex-[1.5] py-4 px-6 font-unageo text-[15px] font-bold rounded-xl flex items-center justify-center gap-2 transition-all duration-300 ${isFormValid ? 'bg-primary-100 text-white hover:brightness-105 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary-100/20 cursor-pointer' : 'bg-secondary-700 text-accent-60 border border-secondary-600 cursor-not-allowed'} group active:translate-y-0 active:scale-95`}
+              disabled={!isFormValid || isSaving}
+              className={`flex-[1.5] py-4 px-6 font-unageo text-[15px] font-bold rounded-xl flex items-center justify-center gap-2 transition-all duration-300 ${isFormValid && !isSaving ? 'bg-primary-100 text-white hover:brightness-105 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary-100/20 cursor-pointer' : 'bg-secondary-700 text-accent-60 border border-secondary-600 cursor-not-allowed'} group active:translate-y-0 active:scale-95`}
             >
-              <Save className="w-5 h-5" />
-              {service ? 'Update Service' : 'Create Service'}
+              {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+              {isSaving ? 'Saving…' : service ? 'Update Service' : 'Create Service'}
             </button>
           </div>
         </form>
@@ -351,5 +287,3 @@ export function AddEditServiceDrawer({ isOpen, onClose, service, onSave }: AddEd
     </>
   );
 }
-
-
