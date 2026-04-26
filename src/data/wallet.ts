@@ -3,6 +3,7 @@ export interface Transaction {
   type: 'payment' | 'withdrawal' | 'commission' | 'reversal';
   title: string;
   description: string;
+  /** Plain numeric string (e.g. "10.20") for math and legacy UI */
   amount: string;
   date: string;
   time: string;
@@ -11,6 +12,21 @@ export interface Transaction {
   serviceName?: string;
   receiptId?: string;
   commissionRate?: string;
+  /** ISO 8601 from API — used for date filters when present */
+  createdAt?: string;
+  /** Formatted with correct currency symbol */
+  amountDisplay?: string;
+  currency?: string;
+  grossAmount?: string;
+  netToVendorAmount?: string;
+  commissionAmount?: string;
+  referenceId?: string;
+  referenceType?: string;
+  appointmentDate?: string;
+  appointmentTime?: string;
+  paymentMethod?: string;
+  /** Balance rollups for rows from GET /transactions */
+  apiAmounts?: { gross: number; commission: number; net: number };
 }
 
 export interface PayoutAccount {

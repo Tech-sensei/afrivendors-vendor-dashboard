@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { Wallet, ArrowUpRight, CreditCard, Calendar, Eye, EyeOff } from "lucide-react";
+import { Wallet, ArrowUpRight, CreditCard, TrendingUp, Eye, EyeOff } from "lucide-react";
+import { formatMoney } from "@/lib/currency";
 
 interface BalanceCardsProps {
   availableBalance: number;
   lifetimeEarnings: number;
-  totalCommissions: number;
-  totalWithdrawals: number;
+  currencyCode?: string;
+  isLoading?: boolean;
   onWithdraw: () => void;
   onViewPayouts: () => void;
 }
@@ -15,8 +16,8 @@ interface BalanceCardsProps {
 export function BalanceCards({
   availableBalance,
   lifetimeEarnings,
-  totalCommissions,
-  totalWithdrawals,
+  currencyCode = "GBP",
+  isLoading = false,
   onWithdraw,
   onViewPayouts,
 }: BalanceCardsProps) {
@@ -24,16 +25,15 @@ export function BalanceCards({
 
   const formatBalance = (amount: number) => {
     if (!showBalance) return "***";
-    return `$${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return formatMoney(amount, currencyCode);
   };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
       {/* Available Balance */}
       <div className="p-7 bg-primary-100 rounded-2xl shadow-lg shadow-primary-100/20 relative overflow-hidden group">
-        {/* Glow effect */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-3xl transition-all group-hover:bg-white/15" />
-        
+
         <div className="flex items-center justify-between mb-3 relative z-10">
           <div className="flex items-center gap-2.5 opacity-90">
             <Wallet className="w-5.5 h-5.5 text-white" />
@@ -49,9 +49,13 @@ export function BalanceCards({
             {showBalance ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
         </div>
-        <h2 className="font-unbounded text-4xl font-bold text-white mb-5 relative z-10">
-          {formatBalance(availableBalance)}
-        </h2>
+        {isLoading ? (
+          <div className="h-10 w-36 bg-white/20 rounded-xl animate-pulse mb-5" />
+        ) : (
+          <h2 className="font-unbounded text-4xl font-bold text-white mb-5 relative z-10">
+            {formatBalance(availableBalance)}
+          </h2>
+        )}
         <div className="flex gap-3 relative z-10">
           <button
             onClick={onWithdraw}
@@ -70,35 +74,21 @@ export function BalanceCards({
         </div>
       </div>
 
-      {/* Lifetime Earnings */}
+      {/* Lifetime Earnings (escrowBalance) */}
       <div className="p-7 bg-white border border-zinc-200 rounded-2xl group transition-all hover:border-primary-100/30">
         <div className="flex items-center gap-2.5 mb-3">
-          <Calendar className="w-5.5 h-5.5 text-zinc-400 group-hover:text-primary-100 transition-colors" />
+          <TrendingUp className="w-5.5 h-5.5 text-zinc-400 group-hover:text-primary-100 transition-colors" />
           <span className="font-unageo text-sm font-medium text-zinc-500">
-            Lifetime Earnings
+            Incoming Earnings
           </span>
         </div>
-        <h2 className="font-unbounded text-4xl font-bold text-secondary-000 mb-5">
-          {formatBalance(lifetimeEarnings)}
-        </h2>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <p className="font-unageo text-[12px] text-zinc-500">
-              Total Commissions
-            </p>
-            <p className="font-unageo text-base font-semibold text-red-500">
-              {showBalance ? `-$${totalCommissions.toFixed(2)}` : "***"}
-            </p>
-          </div>
-          <div className="space-y-1">
-            <p className="font-unageo text-[12px] text-zinc-500">
-              Withdrawn
-            </p>
-            <p className="font-unageo text-base font-semibold text-blue-500">
-              {showBalance ? `$${totalWithdrawals.toFixed(2)}` : "***"}
-            </p>
-          </div>
-        </div>
+        {isLoading ? (
+          <div className="h-10 w-36 bg-zinc-100 rounded-xl animate-pulse mb-5" />
+        ) : (
+          <h2 className="font-unbounded text-4xl font-bold text-secondary-000 mb-5">
+            {formatBalance(lifetimeEarnings)}
+          </h2>
+        )}
       </div>
     </div>
   );

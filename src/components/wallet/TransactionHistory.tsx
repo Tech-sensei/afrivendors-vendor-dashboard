@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { SlidersHorizontal, Calendar, X } from "lucide-react";
+import { SlidersHorizontal, Calendar, X, Loader2 } from "lucide-react";
 import { Transaction } from "@/data/wallet";
 import { TransactionCard } from "./TransactionCard";
 
@@ -18,6 +18,10 @@ interface TransactionHistoryProps {
   onApplyCustomRange: () => void;
   onClearFilters: () => void;
   onViewTransaction: (id: string) => void;
+  isLoading?: boolean;
+  hasNextPage?: boolean;
+  isFetchingNextPage?: boolean;
+  onLoadMore?: () => void;
 }
 
 export function TransactionHistory({
@@ -33,6 +37,10 @@ export function TransactionHistory({
   onApplyCustomRange,
   onClearFilters,
   onViewTransaction,
+  isLoading,
+  hasNextPage,
+  isFetchingNextPage,
+  onLoadMore,
 }: TransactionHistoryProps) {
   // Group transactions by date
   const groupedTransactions = transactions.reduce((groups, transaction) => {
@@ -166,7 +174,20 @@ export function TransactionHistory({
 
       {/* Transaction List */}
       <div className="space-y-8">
-        {transactions.length === 0 ? (
+        {isLoading && transactions.length === 0 ? (
+          <div
+            className="flex flex-col items-center justify-center gap-4 py-20 px-5 bg-white border border-zinc-100 rounded-3xl"
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+          >
+            <Loader2
+              className="w-10 h-10 text-primary-100 animate-spin"
+              aria-hidden
+            />
+            <p className="font-unageo text-sm text-zinc-500">Loading transactions…</p>
+          </div>
+        ) : transactions.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 px-5 bg-white border border-dashed border-zinc-200 rounded-3xl">
             <div className="w-16 h-16 bg-zinc-50 rounded-2xl flex items-center justify-center mb-4">
               <Calendar className="w-8 h-8 text-zinc-300" />
@@ -198,6 +219,28 @@ export function TransactionHistory({
               </div>
             </div>
           ))
+        )}
+        {hasNextPage && onLoadMore && (
+          <div className="flex justify-center pt-4">
+            <button
+              type="button"
+              onClick={onLoadMore}
+              disabled={isFetchingNextPage}
+              className="inline-flex items-center justify-center gap-2 min-w-[140px] px-6 py-3 rounded-xl font-unageo text-sm font-bold bg-secondary-700 border border-secondary-600 text-secondary-000 hover:border-primary-100/40 transition-all disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+            >
+              {isFetchingNextPage ? (
+                <>
+                  <Loader2
+                    className="w-5 h-5 text-primary-100 animate-spin shrink-0"
+                    aria-hidden
+                  />
+                  <span>Loading…</span>
+                </>
+              ) : (
+                "Load more"
+              )}
+            </button>
+          </div>
         )}
       </div>
     </div>

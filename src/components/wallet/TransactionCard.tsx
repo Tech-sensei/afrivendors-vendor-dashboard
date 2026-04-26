@@ -9,6 +9,7 @@ import {
   ChevronRight 
 } from "lucide-react";
 import { Transaction } from "@/data/wallet";
+import { formatMoney } from "@/lib/currency";
 
 interface TransactionCardProps {
   transaction: Transaction;
@@ -16,6 +17,10 @@ interface TransactionCardProps {
 }
 
 export function TransactionCard({ transaction, onClick }: TransactionCardProps) {
+  const displayAmount =
+    transaction.amountDisplay ??
+    formatMoney(parseFloat(transaction.amount) || 0, transaction.currency ?? "GBP");
+
   const getIcon = () => {
     switch (transaction.type) {
       case "payment":
@@ -104,7 +109,8 @@ export function TransactionCard({ transaction, onClick }: TransactionCardProps) 
 
       <div className="flex flex-col items-end justify-between self-stretch min-h-[48px]">
         <p className={`font-unbounded text-base font-bold ${getAmountColor()}`}>
-          {getAmountPrefix()}${transaction.amount}
+          {getAmountPrefix()}
+          {displayAmount}
         </p>
         <div className="mt-2">
           {getStatusBadge()}

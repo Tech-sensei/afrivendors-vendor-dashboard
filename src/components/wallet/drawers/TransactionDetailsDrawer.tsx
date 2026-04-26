@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Transaction } from "@/data/wallet";
 import { toast } from "sonner";
+import { formatMoney } from "@/lib/currency";
 
 interface TransactionDetailsDrawerProps {
   isOpen: boolean;
@@ -80,6 +81,30 @@ export function TransactionDetailsDrawer({
     }
   };
 
+  const statusLabel =
+    transaction.status === "success"
+      ? "Completed"
+      : transaction.status === "pending"
+        ? "Pending"
+        : transaction.status === "warning"
+          ? "Review"
+          : transaction.status === "error"
+            ? "Failed"
+            : transaction.status;
+
+  const currency = transaction.currency ?? "GBP";
+  const summaryAmount =
+    transaction.amountDisplay ??
+    formatMoney(parseFloat(transaction.amount) || 0, currency);
+  const summaryPrefix =
+    transaction.type === "payment"
+      ? "+"
+      : transaction.type === "withdrawal" ||
+          transaction.type === "commission" ||
+          transaction.type === "reversal"
+        ? "-"
+        : "";
+
   return (
     <div
       className={`fixed inset-0 z-50 transition-visibility duration-300 ${
@@ -130,10 +155,11 @@ export function TransactionDetailsDrawer({
               </div>
               <div className="space-y-2">
                 <h3 className="font-unbounded text-3xl font-bold text-secondary-000 tracking-tight">
-                  {transaction.type === "payment" ? "+" : "-"} ${transaction.amount}
+                  {summaryPrefix}
+                  {summaryAmount}
                 </h3>
                 <div className={`inline-flex px-4 py-1.5 rounded-full border-[1.5px] text-[11px] font-bold uppercase tracking-widest ${getStatusStyle()}`}>
-                  {transaction.status}
+                  {statusLabel}
                 </div>
               </div>
             </div>
@@ -187,14 +213,18 @@ export function TransactionDetailsDrawer({
                       <User className="w-4 h-4 text-primary-100" />
                       Customer
                     </div>
-                    <span className="font-bold text-secondary-000">{transaction.customerName}</span>
+                    <span className="font-bold text-secondary-000">
+                      {transaction.customerName ?? "—"}
+                    </span>
                   </div>
                   <div className="p-5 flex justify-between items-center text-sm border-b border-secondary-600">
                     <div className="flex items-center gap-3 text-accent-80">
                       <ShieldCheck className="w-4 h-4 text-primary-100" />
                       Service
                     </div>
-                    <span className="font-bold text-secondary-000">{transaction.serviceName}</span>
+                    <span className="font-bold text-secondary-000">
+                      {transaction.serviceName ?? "—"}
+                    </span>
                   </div>
                   {transaction.receiptId && (
                     <div className="p-5 flex justify-between items-center text-sm">
@@ -205,6 +235,34 @@ export function TransactionDetailsDrawer({
                       <span className="font-bold text-secondary-000">{transaction.receiptId}</span>
                     </div>
                   )}
+                </div>
+              </div>
+            )}
+
+            {transaction.type === "payment" &&
+              transaction.grossAmount &&
+              transaction.commissionAmount &&
+              transaction.netToVendorAmount && (
+              <div className="space-y-4">
+                <h4 className="font-unageo text-xs font-bold text-zinc-400 uppercase tracking-widest px-1">
+                  Amount breakdown
+                </h4>
+                <div className="bg-white border border-secondary-600 rounded-2xl overflow-hidden">
+                  <div className="p-5 flex justify-between items-center text-sm border-b border-secondary-600">
+                    <div className="text-accent-80">Gross (customer paid)</div>
+                    <span className="font-bold text-secondary-000">{transaction.grossAmount}</span>
+                  </div>
+                  <div className="p-5 flex justify-between items-center text-sm border-b border-secondary-600">
+                    <div className="text-accent-80">
+                      Platform commission
+                      {transaction.commissionRate ? ` (${transaction.commissionRate})` : ""}
+                    </div>
+                    <span className="font-bold text-red-600">{transaction.commissionAmount}</span>
+                  </div>
+                  <div className="p-5 flex justify-between items-center text-sm">
+                    <div className="text-accent-80">Net to you</div>
+                    <span className="font-bold text-emerald-600">{transaction.netToVendorAmount}</span>
+                  </div>
                 </div>
               </div>
             )}

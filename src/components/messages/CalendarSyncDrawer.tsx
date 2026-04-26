@@ -19,12 +19,12 @@ export function CalendarSyncDrawer({ isOpen, onClose, messageContent, onSave }: 
 
   const handleSave = () => {
     if (date && time && title) {
-        onSave(date, time, title, note);
-        // Reset
-        setDate('');
-        setTime('');
-        setTitle('New Appointment');
-        setNote('');
+      onSave(date, time, title, note);
+      // Reset
+      setDate('');
+      setTime('');
+      setTitle('New Appointment');
+      setNote('');
     }
   };
 
@@ -57,60 +57,60 @@ export function CalendarSyncDrawer({ isOpen, onClose, messageContent, onSave }: 
             </div>
 
             <div className="p-6 flex-1 space-y-6">
-                <div className="space-y-4">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-secondary-000 mb-2">Event Title</label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="w-full p-3 rounded-xl border border-accent-20 bg-white focus:border-blue-600 outline-none"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-secondary-000 mb-2">Event Title</label>
-                    <input 
-                      type="text" 
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
+                    <label className="block text-sm font-bold text-secondary-000 mb-2">Date</label>
+                    <input
+                      type="date"
+                      value={date}
+                      onChange={(e) => setDate(e.target.value)}
                       className="w-full p-3 rounded-xl border border-accent-20 bg-white focus:border-blue-600 outline-none"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-bold text-secondary-000 mb-2">Date</label>
-                        <input 
-                        type="date" 
-                        value={date}
-                        onChange={(e) => setDate(e.target.value)}
-                        className="w-full p-3 rounded-xl border border-accent-20 bg-white focus:border-blue-600 outline-none"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-bold text-secondary-000 mb-2">Time</label>
-                        <input 
-                        type="time" 
-                        value={time}
-                        onChange={(e) => setTime(e.target.value)}
-                        className="w-full p-3 rounded-xl border border-accent-20 bg-white focus:border-blue-600 outline-none"
-                        />
-                    </div>
-                  </div>
                   <div>
-                    <label className="block text-sm font-bold text-secondary-000 mb-2">Description</label>
-                    <textarea 
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      rows={4}
-                      className="w-full p-3 rounded-xl border border-accent-20 bg-white focus:border-blue-600 outline-none resize-none"
+                    <label className="block text-sm font-bold text-secondary-000 mb-2">Time</label>
+                    <input
+                      type="time"
+                      value={time}
+                      onChange={(e) => setTime(e.target.value)}
+                      className="w-full p-3 rounded-xl border border-accent-20 bg-white focus:border-blue-600 outline-none"
                     />
                   </div>
-               </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-secondary-000 mb-2">Description</label>
+                  <textarea
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    rows={4}
+                    className="w-full p-3 rounded-xl border border-accent-20 bg-white focus:border-blue-600 outline-none resize-none"
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="p-6 border-t border-accent-20">
-               <button 
-                 onClick={handleSave}
-                 disabled={!date || !time || !title}
-                 className={`w-full py-3.5 rounded-xl font-unbounded text-sm font-bold transition-all
+              <button
+                onClick={handleSave}
+                disabled={!date || !time || !title}
+                className={`w-full py-3.5 rounded-xl font-unbounded text-sm font-bold transition-all
                    ${date && time && title
-                     ? 'bg-blue-600 text-white hover:opacity-90 shadow-md' 
-                     : 'bg-accent-20 text-accent-60 cursor-not-allowed'}
+                    ? 'bg-blue-600 text-white hover:opacity-90 shadow-md'
+                    : 'bg-accent-20 text-accent-60 cursor-not-allowed'}
                  `}
-               >
-                 Add to Calendar
-               </button>
+              >
+                Add to Calendar
+              </button>
             </div>
           </motion.div>
         </>

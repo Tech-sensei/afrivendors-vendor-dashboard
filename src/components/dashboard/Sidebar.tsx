@@ -50,7 +50,7 @@ export function Sidebar({ activePath = '/', onLogout, isMobileOpen = false, onMo
   const navigationItems = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/appointments', label: 'Appointments', icon: Calendar },
-    { path: '/rfs-requests', label: 'RFS Requests', icon: ClipboardList },
+    { path: '/custom-requests', label: 'Custom Requests', icon: ClipboardList },
     { path: '/services', label: 'Services', icon: Briefcase },
     { path: '/wallet', label: 'Wallet', icon: Wallet },
     { path: '/messages', label: 'Messages', icon: MessageSquare },

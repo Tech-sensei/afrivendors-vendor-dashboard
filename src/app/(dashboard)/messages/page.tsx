@@ -1,185 +1,267 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Search, Pin, PinOff, MessageSquare } from 'lucide-react';
-import { toast } from 'sonner';
+import React, { useState, useMemo, useEffect } from "react";
+import { Search, Pin, PinOff, MessageSquare } from "lucide-react";
+import { ChatDrawer } from "@/components/messages/ChatDrawer";
+import { CustomerInfoDrawer } from "@/components/messages/CustomerInfoDrawer";
+// import { SetReminderDrawer } from "@/components/messages/SetReminderDrawer";
+// import { CalendarSyncDrawer } from "@/components/messages/CalendarSyncDrawer";
+import useStreamChat from "@/hooks/useStreamChat";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";
+import { VendorProfile, VendorGalleryItem } from "@/types/auth";
+import {
+  useStreamChatToken,
+  useGetPinnedChannels,
+  usePinChannel,
+  PinAction,
+} from "@/services/useStreamChat";
+import { Channel } from "stream-chat";
+import { ConversationListItem } from "@/components/messages/ConversationListItem";
+import streamChat from "@/lib/streamChat";
+import { useQueryClient } from "@tanstack/react-query";
 
-// Components
-import { ConversationListItem, Conversation } from '@/components/messages/ConversationListItem';
-import { ChatDrawer } from '@/components/messages/ChatDrawer';
-import { Message } from '@/components/messages/ChatMessage';
-import { CustomerInfoDrawer } from '@/components/messages/CustomerInfoDrawer';
-import { SetReminderDrawer } from '@/components/messages/SetReminderDrawer';
-import { CalendarSyncDrawer } from '@/components/messages/CalendarSyncDrawer';
-
-// Data
-import { mockCustomers, mockConversations, mockMessagesData } from '@/data/messages';
+function getBannerImageUrl(gallery: VendorGalleryItem[] | undefined) {
+  const banner = gallery?.find((item) => item.isBanner === true);
+  return banner ? banner.imageUrl : null;
+}
 
 export default function VendorMessages() {
-  const [conversations, setConversations] = useState<Conversation[]>(mockConversations);
-  const [messages, setMessages] = useState<Record<string, Message[]>>(mockMessagesData);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'recent' | 'unread' | 'pinned'>('recent');
-  
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const user: VendorProfile | null = useSelector(
+    (state: RootState) => state.auth.profile,
+  );
+  const [conversations, setConversations] = useState<Channel[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"recent" | "unread" | "pinned">(
+    "recent",
+  );
+
+  const [selectedConversation, setSelectedConversation] =
+    useState<Channel | null>(null);
+  const [pinnedIds, setPinnedIds] = useState<string[]>([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isCustomerInfoOpen, setIsCustomerInfoOpen] = useState(false);
-  const [isReminderOpen, setIsReminderOpen] = useState(false);
-  const [isCalendarSyncOpen, setIsCalendarSyncOpen] = useState(false);
-  const [selectedMessageForAction, setSelectedMessageForAction] = useState<Message | null>(null);
 
-  const activeCustomer = mockCustomers.find(c => c.id === selectedConversation?.customerId);
+  //get user token
+  const {
+    data: streamChatToken,
+    isLoading: isLoadingStreamChatToken,
+    isError: isErrorStreamChatToken,
+  } = useStreamChatToken();
+  const {
+    data: pinnedChannels,
+    isLoading: isLoadingPinnedChannels,
+    isError: isErrorPinnedChannels,
+  } = useGetPinnedChannels();
+  const { mutate: pinChannel, isPending: isPinningChannel } = usePinChannel();
+  const queryClient = useQueryClient();
 
-  const handleOpenChat = (conversation: Conversation) => {
+  //get all conversations
+  const { getAllChannels, instantiateUser } = useStreamChat();
+  const [streamReady, setStreamReady] = useState(false);
+  const [channelsRefreshKey, setChannelsRefreshKey] = useState(0);
+
+  useEffect(() => {
+    const vendorId = user?.vendor?.id;
+    const token = streamChatToken?.userChatToken;
+    if (!vendorId || !token) {
+      setStreamReady(false);
+      return;
+    }
+
+    let cancelled = false;
+    setStreamReady(false);
+
+    const name =
+      `${user?.vendor?.firstName ?? ""} ${user?.vendor?.lastName ?? ""}`.trim();
+    const imageUrl = getBannerImageUrl(user?.gallery ?? []);
+
+    void instantiateUser(vendorId, name, imageUrl ?? "", token).then(
+      () => {
+        if (!cancelled) setStreamReady(true);
+      },
+      () => {
+        if (!cancelled) setStreamReady(false);
+      },
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    instantiateUser,
+    user?.vendor?.id,
+    user?.vendor?.firstName,
+    user?.vendor?.lastName,
+    user?.gallery,
+    streamChatToken?.userChatToken,
+  ]);
+
+  useEffect(() => {
+    if (!streamReady || !user?.vendor?.id) return;
+    let cancelled = false;
+    void getAllChannels(String(user.vendor.id)).then((channels) => {
+      if (cancelled) return;
+      setConversations(channels);
+    }).catch(() => {
+      if (cancelled) return;
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [getAllChannels, streamReady, user?.vendor?.id, channelsRefreshKey]);
+
+  useEffect(() => {
+    if (!pinnedChannels) return;
+    // Backend returns [{ id, channelId, userId }, ...]
+    setPinnedIds(
+      Array.isArray(pinnedChannels)
+        ? pinnedChannels
+          .map((p: any) => String(p?.channelId ?? ""))
+          .filter((id: string) => id.length > 0)
+        : [],
+    );
+  }, [pinnedChannels]);
+
+  useEffect(() => {
+    if (!streamReady) return;
+
+    // Keep channel list (unreadCount / last_message) in sync without refresh.
+    const handler = () => setChannelsRefreshKey((k) => k + 1);
+
+    streamChat.on("message.new", handler);
+    streamChat.on("notification.message_new", handler);
+    streamChat.on("message.read", handler);
+    streamChat.on("notification.mark_read", handler);
+    streamChat.on("notification.mark_unread", handler);
+    streamChat.on("channel.updated", handler);
+
+    return () => {
+      streamChat.off("message.new", handler);
+      streamChat.off("notification.message_new", handler);
+      streamChat.off("message.read", handler);
+      streamChat.off("notification.mark_read", handler);
+      streamChat.off("notification.mark_unread", handler);
+      streamChat.off("channel.updated", handler);
+    };
+  }, [streamReady]);
+
+  const handleOpenChat = (conversation: Channel) => {
     setSelectedConversation(conversation);
     setIsChatOpen(true);
-    // Mark as read
-    setConversations(prev =>
-      prev.map(conv =>
-        conv.id === conversation.id
-          ? { ...conv, unreadCount: 0 }
-          : conv
-      )
+  };
+
+  const handleTogglePin = (conversationId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!conversationId || isPinningChannel) return;
+
+    const currentlyPinned = pinnedIds.includes(conversationId);
+    const action = currentlyPinned ? PinAction.UNPIN : PinAction.PIN;
+
+    // Optimistic UI
+    setPinnedIds((prev) =>
+      currentlyPinned
+        ? prev.filter((id) => id !== conversationId)
+        : [...prev, conversationId],
+    );
+
+    pinChannel(
+      { channelId: conversationId, action },
+      {
+        onSuccess: async () => {
+          await queryClient.invalidateQueries({
+            queryKey: ["pinned-channels"],
+          });
+        },
+        onError: () => {
+          // Revert optimistic update
+          setPinnedIds((prev) =>
+            currentlyPinned
+              ? [...prev, conversationId]
+              : prev.filter((id) => id !== conversationId),
+          );
+        },
+      },
     );
   };
 
-  const handleSendMessage = (content: string) => {
-    if (!selectedConversation) return;
+  const filteredConversations = useMemo(() => {
+    const q = searchQuery.toLowerCase();
+    const list = conversations ?? [];
 
-    const newMessage: Message = {
-      id: `msg-${Date.now()}`,
-      senderId: 'vendor',
-      senderName: 'ZuriGlow Beauty Hub',
-      content: content,
-      timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
-      isVendor: true,
-      isRead: false
-    };
+    const searched = list.filter((c) => {
+      const customerName = String(
+        (c as any)?.data?.name ?? c.id ?? "",
+      ).toLowerCase();
+      const lastMsg = (c as any)?.state?.messages?.[
+        (c as any)?.state?.messages?.length - 1
+      ]?.text;
+      const lastMessage = String(lastMsg ?? "").toLowerCase();
+      const subtitle = "";
 
-    setMessages(prev => ({
-      ...prev,
-      [selectedConversation.id]: [...(prev[selectedConversation.id] || []), newMessage]
-    }));
-
-    setConversations(prev =>
-      prev.map(conv =>
-        conv.id === selectedConversation.id
-          ? { ...conv, lastMessage: content, lastMessageTime: 'Just now' }
-          : conv
-      )
-    );
-
-    toast.success('Message sent!');
-  };
-
-  const handleSendFile = (file: File) => {
-    if (!selectedConversation) return;
-
-    const newMessage: Message = {
-      id: `msg-${Date.now()}`,
-      senderId: 'vendor',
-      senderName: 'ZuriGlow Beauty Hub',
-      content: 'Sent an attachment',
-      timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
-      isVendor: true,
-      isRead: false,
-      hasAttachment: true,
-      attachmentUrl: URL.createObjectURL(file), // Note: In propd, handle file upload to server
-      attachmentName: file.name
-    };
-
-    setMessages(prev => ({
-      ...prev,
-      [selectedConversation.id]: [...(prev[selectedConversation.id] || []), newMessage]
-    }));
-
-    toast.success(`Sent ${file.name}`);
-  };
-
-  const handleTogglePin = (conversationId: string, event: React.MouseEvent) => {
-    event.stopPropagation();
-    setConversations(prev =>
-      prev.map(conv =>
-        conv.id === conversationId
-          ? { ...conv, isPinned: !conv.isPinned }
-          : conv
-      )
-    );
-    const conv = conversations.find(c => c.id === conversationId);
-    toast.success(`${conv?.isPinned ? 'Unpinned' : 'Pinned'} conversation with ${conv?.customerName}`);
-  };
-
-  const handleSetReminder = (messageId: string) => {
-    const message = messages[selectedConversation?.id || '']?.find(m => m.id === messageId);
-    if (message) {
-      setSelectedMessageForAction(message);
-      setIsReminderOpen(true);
-    }
-  };
-
-  const handleSyncCalendar = (messageId: string) => {
-    const message = messages[selectedConversation?.id || '']?.find(m => m.id === messageId);
-    if (message) {
-      setSelectedMessageForAction(message);
-      setIsCalendarSyncOpen(true);
-    }
-  };
-
-  const handleSaveReminder = (reminderDate: string, reminderTime: string, note: string) => {
-    if (selectedConversation && selectedMessageForAction) {
-      setMessages(prev => ({
-        ...prev,
-        [selectedConversation.id]: prev[selectedConversation.id].map(msg =>
-          msg.id === selectedMessageForAction.id
-            ? { ...msg, hasReminder: true, reminderDate: `${reminderDate} at ${reminderTime}` }
-            : msg
-        )
-      }));
-      setIsReminderOpen(false);
-      setSelectedMessageForAction(null);
-      toast.success(`Reminder set for ${reminderDate} at ${reminderTime}`);
-    }
-  };
-
-  const handleSaveCalendarSync = (eventDate: string, eventTime: string, eventTitle: string, eventNote: string) => {
-    if (selectedConversation && selectedMessageForAction) {
-      setMessages(prev => ({
-        ...prev,
-        [selectedConversation.id]: prev[selectedConversation.id].map(msg =>
-          msg.id === selectedMessageForAction.id
-            ? { ...msg, hasCalendarSync: true, calendarDate: `${eventDate} at ${eventTime}` }
-            : msg
-        )
-      }));
-      setIsCalendarSyncOpen(false);
-      setSelectedMessageForAction(null);
-      toast.success(`"${eventTitle}" added to your calendar!`);
-    }
-  };
-
-  const filteredConversations = conversations
-    .filter(conv => 
-      conv.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      conv.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-    .sort((a, b) => {
-      // Primary sort: Pinned status (Always on top)
-      if (a.isPinned !== b.isPinned) {
-        return a.isPinned ? -1 : 1;
-      }
-      
-      // Secondary sort: Active tab criteria
-      if (sortBy === 'unread') {
-        return b.unreadCount - a.unreadCount;
-      }
-      
-      // Default / Recent: Keep original order (assuming mock data is time-sorted)
-      return 0;
+      return (
+        customerName.includes(q) ||
+        lastMessage.includes(q) ||
+        subtitle.includes(q)
+      );
     });
+
+    const filteredByTab =
+      sortBy === "pinned"
+        ? searched.filter((c) => pinnedIds.includes(String(c.id)))
+        : searched;
+
+    const unreadCount = (ch: Channel) =>
+      typeof (ch as any).countUnread === "function"
+        ? (ch as any).countUnread()
+        : 0;
+
+    const lastMessageAtMs = (ch: Channel) => {
+      const dt = (ch as any)?.data?.last_message_at;
+      if (!dt) return 0;
+      const d = typeof dt === "string" ? new Date(dt) : dt;
+      return d instanceof Date ? d.getTime() : 0;
+    };
+
+    return filteredByTab.sort((a, b) => {
+      const aPinned = pinnedIds.includes(String(a.id));
+      const bPinned = pinnedIds.includes(String(b.id));
+      // Only float pinned to top in the "recent" view.
+      // In "unread", unread ordering should dominate.
+      if (sortBy === "recent" && aPinned !== bPinned) return aPinned ? -1 : 1;
+
+      if (sortBy === "unread") {
+        return unreadCount(b) - unreadCount(a);
+      }
+
+      // recent or pinned: newest activity first
+      return lastMessageAtMs(b) - lastMessageAtMs(a);
+    });
+  }, [conversations, searchQuery, sortBy, pinnedIds]);
+
+  const activeCustomer = selectedConversation
+    ? {
+      id: String((selectedConversation as any)?.data?.customerId ?? ""),
+      name: String(
+        (selectedConversation as any)?.data?.name ??
+        selectedConversation.id ??
+        "",
+      ),
+      avatar: String((selectedConversation as any)?.data?.image ?? ""),
+      email: "",
+      phone: "",
+      location: "",
+      joinedDate: "",
+      totalBookings: 0,
+      totalSpent: "0.00",
+      lastBooking: "",
+      rating: 0,
+    }
+    : null;
 
   return (
     <div className="max-w-[1440px] mx-auto min-h-[calc(100vh-100px)]">
-      {/* Header */}
       <div className="mb-8">
         <h1 className="font-unbounded text-3xl font-black text-secondary-000 tracking-tight mb-2">
           Messages & Inbox
@@ -189,11 +271,8 @@ export default function VendorMessages() {
         </p>
       </div>
 
-      {/* Main Layout: List + Filters */}
       <div className="flex flex-col gap-6">
-        {/* Search & Filters */}
         <div className="flex flex-col md:flex-row gap-4">
-          {/* Search */}
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-accent-40" />
             <input
@@ -205,17 +284,16 @@ export default function VendorMessages() {
             />
           </div>
 
-          {/* Sort tabs */}
           <div className="flex p-1.5 bg-white border border-accent-20 rounded-xl shadow-sm shrink-0 gap-2">
-            {(['recent', 'unread', 'pinned'] as const).map((tab) => (
+            {(["recent", "unread", "pinned"] as const).map((tab) => (
               <button
                 key={tab}
+                type="button"
                 onClick={() => setSortBy(tab)}
-                className={`px-6 py-2.5 rounded-[10px] font-unageo text-sm font-bold capitalize transition-all ${
-                  sortBy === tab 
-                    ? 'bg-primary-100 text-white shadow-sm' 
-                    : 'bg-transparent text-accent-60 hover:text-secondary-000 hover:bg-accent-10'
-                }`}
+                className={`px-6 py-2.5 rounded-[10px] font-unageo text-sm font-bold capitalize transition-all ${sortBy === tab
+                    ? "bg-primary-100 text-white shadow-sm"
+                    : "bg-transparent text-accent-60 hover:text-secondary-000 hover:bg-accent-10"
+                  }`}
               >
                 {tab}
               </button>
@@ -223,7 +301,6 @@ export default function VendorMessages() {
           </div>
         </div>
 
-        {/* Conversation List */}
         <div className="bg-white border border-accent-20 rounded-2xl overflow-hidden shadow-sm">
           {filteredConversations.length === 0 ? (
             <div className="py-16 px-6 text-center">
@@ -234,41 +311,49 @@ export default function VendorMessages() {
                 No Conversations Found
               </h3>
               <p className="font-unageo text-sm text-accent-60">
-                {searchQuery ? 'Try a different search term' : 'No messages yet'}
+                {searchQuery
+                  ? "Try a different search term"
+                  : "No messages yet"}
               </p>
             </div>
           ) : (
             <div className="divide-y divide-accent-10">
-              {filteredConversations.map((conversation) => (
-                <div key={conversation.id} className="relative group">
-                  <ConversationListItem
-                    conversation={conversation}
-                    isActive={false}
-                    onClick={() => handleOpenChat(conversation)}
-                  />
-                  {/* Pin button (Desktop Hover) */}
-                  <button
-                    onClick={(e) => handleTogglePin(conversation.id, e)}
-                    className={`absolute right-4 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-lg border transition-all z-10
-                      ${conversation.isPinned 
-                        ? 'bg-primary-100/10 border-primary-100/20 text-primary-100 opacity-100' 
-                        : 'bg-white border-accent-20 text-accent-40 opacity-0 group-hover:opacity-100 hover:text-primary-100 hover:border-primary-100'}
+              {filteredConversations.map((conversation) => {
+                const id = String(conversation.id);
+                const isPinned = pinnedIds.includes(id);
+                return (
+                  <div key={conversation.id} className="relative group">
+                    <ConversationListItem
+                      conversation={conversation}
+                      isActive={
+                        selectedConversation?.id === conversation.id &&
+                        isChatOpen
+                      }
+                      isPinned={isPinned}
+                      onClick={() => handleOpenChat(conversation)}
+                    />
+                    <button
+                      type="button"
+                      onClick={(e) =>
+                        handleTogglePin(String(conversation.id), e)
+                      }
+                      className={`absolute right-4 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-lg border transition-all z-10
+                      ${isPinned
+                          ? "bg-primary-100/10 border-primary-100/20 text-primary-100 opacity-100"
+                          : "bg-white border-accent-20 text-accent-40 opacity-0 group-hover:opacity-100 hover:text-primary-100 hover:border-primary-100"
+                        }
                     `}
-                  >
-                    {conversation.isPinned ? (
-                      <PinOff size={16} />
-                    ) : (
-                      <Pin size={16} />
-                    )}
-                  </button>
-                </div>
-              ))}
+                    >
+                      {isPinned ? <PinOff size={16} /> : <Pin size={16} />}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
       </div>
 
-      {/* Drawers */}
       <ChatDrawer
         isOpen={isChatOpen}
         onClose={() => {
@@ -276,38 +361,12 @@ export default function VendorMessages() {
           setSelectedConversation(null);
         }}
         conversation={selectedConversation}
-        messages={messages[selectedConversation?.id || ''] || []}
-        onSendMessage={handleSendMessage}
-        onSendFile={handleSendFile}
-        onSetReminder={handleSetReminder}
-        onSyncCalendar={handleSyncCalendar}
-        onViewCustomerInfo={() => setIsCustomerInfoOpen(true)}
       />
 
       <CustomerInfoDrawer
         isOpen={isCustomerInfoOpen}
         onClose={() => setIsCustomerInfoOpen(false)}
-        customer={activeCustomer || null}
-      />
-
-      <SetReminderDrawer
-        isOpen={isReminderOpen}
-        onClose={() => {
-          setIsReminderOpen(false);
-          setSelectedMessageForAction(null);
-        }}
-        messageContent={selectedMessageForAction?.content || ''}
-        onSave={handleSaveReminder}
-      />
-
-      <CalendarSyncDrawer
-        isOpen={isCalendarSyncOpen}
-        onClose={() => {
-          setIsCalendarSyncOpen(false);
-          setSelectedMessageForAction(null);
-        }}
-        messageContent={selectedMessageForAction?.content || ''}
-        onSave={handleSaveCalendarSync}
+        customer={activeCustomer}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import axios from 'axios';
 import { toast } from 'sonner';
 import {
   SupportTicket,
@@ -8,9 +9,9 @@ import {
   TicketStatus,
   TicketPriority,
   faqs,
-  sampleTickets,
   sampleChatMessages
 } from '@/data/help-support';
+import { useCreateSupportTicket, useSendSupportTicketMessage, useSupportTickets, useTicketMessages } from '@/services/useHelpSupport';
 import { QuickActions } from '@/components/help-support/QuickActions';
 import { FAQSection } from '@/components/help-support/FAQSection';
 import { TicketsList } from '@/components/help-support/TicketsList';
@@ -22,11 +23,18 @@ type DrawerType = 'new-ticket' | 'chat' | 'ticket-detail' | null;
 
 export default function HelpSupportPage() {
   const [activeDrawer, setActiveDrawer] = useState<DrawerType>(null);
-  const [tickets, setTickets] = useState<SupportTicket[]>(sampleTickets);
   const [filterStatus, setFilterStatus] = useState<TicketStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [ticketReply, setTicketReply] = useState('');
+  const ticketsQuery = useSupportTickets();
+  const createTicket = useCreateSupportTicket();
+  const sendTicketMessage = useSendSupportTicketMessage();
+  const { data: selectedTicketMessages } = useTicketMessages(
+    selectedTicket?.id ?? null,
+    activeDrawer === "ticket-detail"
+  );
+  const tickets = useMemo(() => ticketsQuery.data ?? [], [ticketsQuery.data]);
 
   // New Ticket Form
   const [newTicket, setNewTicket] = useState({
@@ -59,81 +67,65 @@ export default function HelpSupportPage() {
     setActiveDrawer('ticket-detail');
   };
 
+  useEffect(() => {
+    if (!selectedTicket) return;
+    const latest = tickets.find((t) => t.id === selectedTicket.id);
+    if (latest) setSelectedTicket(latest);
+  }, [tickets, selectedTicket?.id]);
+
+  useEffect(() => {
+    if (!selectedTicket || !selectedTicketMessages) return;
+    setSelectedTicket((prev) =>
+      prev && prev.id === selectedTicket.id
+        ? { ...prev, messages: selectedTicketMessages, updatedAt: new Date().toISOString() }
+        : prev
+    );
+  }, [selectedTicket?.id, selectedTicketMessages]);
+
   const handleSendTicketReply = () => {
     if (!ticketReply.trim() || !selectedTicket) return;
 
-    const newMessage = {
-      id: String((selectedTicket.messages?.length || 0) + 1),
+    const trimmed = ticketReply.trim();
+    const optimisticMessage = {
+      id: `tmp-${Date.now()}`,
       sender: 'user' as const,
-      message: ticketReply,
+      message: trimmed,
       timestamp: new Date().toISOString(),
       senderName: 'You'
     };
 
-    setTickets(
-      tickets.map(t =>
-        t.id === selectedTicket.id
-          ? {
-              ...t,
-              messages: [...(t.messages || []), newMessage],
-              updatedAt: new Date().toISOString()
-            }
-          : t
-      )
-    );
-
     setSelectedTicket({
       ...selectedTicket,
-      messages: [...(selectedTicket.messages || []), newMessage],
+      messages: [...(selectedTicket.messages || []), optimisticMessage],
       updatedAt: new Date().toISOString()
     });
-
     setTicketReply('');
-    toast.success('Reply sent successfully!');
-
-    // Simulate support response
-    setTimeout(() => {
-      const supportResponse = {
-        id: String((selectedTicket.messages?.length || 0) + 2),
-        sender: 'support' as const,
-        message: 'Thank you for your response! Our team is reviewing your message and will get back to you shortly.',
-        timestamp: new Date().toISOString(),
-        senderName: 'Support Team'
-      };
-
-      setTickets(prevTickets =>
-        prevTickets.map(t =>
-          t.id === selectedTicket.id
-            ? {
-                ...t,
-                messages: [...(t.messages || []), newMessage, supportResponse],
-                status: 'in-progress' as TicketStatus,
-                updatedAt: new Date().toISOString()
-              }
-            : t
-        )
-      );
-
-      if (selectedTicket) {
-        setSelectedTicket({
-          ...selectedTicket,
-          messages: [...(selectedTicket.messages || []), newMessage, supportResponse],
-          status: 'in-progress',
-          updatedAt: new Date().toISOString()
-        });
+    sendTicketMessage.mutate(
+      { ticketId: selectedTicket.id, message: trimmed, attachments: [] },
+      {
+        onSuccess: () => toast.success('Reply sent successfully!'),
+        onError: (error: unknown) => {
+          const msg = axios.isAxiosError(error)
+            ? (error.response?.data as { message?: string } | undefined)?.message
+            : undefined;
+          setTicketReply(trimmed);
+          setSelectedTicket((prev) =>
+            prev && prev.id === selectedTicket.id
+              ? {
+                  ...prev,
+                  messages: (prev.messages || []).filter((m) => m.id !== optimisticMessage.id),
+                }
+              : prev
+          );
+          toast.error(
+            msg || 'Failed to send reply. Please try again.'
+          );
+        },
       }
-    }, 2000);
+    );
   };
 
   const handleUpdateTicketStatus = (ticketId: string, newStatus: TicketStatus) => {
-    setTickets(
-      tickets.map(t =>
-        t.id === ticketId
-          ? { ...t, status: newStatus, updatedAt: new Date().toISOString() }
-          : t
-      )
-    );
-
     if (selectedTicket && selectedTicket.id === ticketId) {
       setSelectedTicket({
         ...selectedTicket,
@@ -164,38 +156,35 @@ export default function HelpSupportPage() {
       return;
     }
 
-    const ticket: SupportTicket = {
-      id: `TICK-${String(tickets.length + 1).padStart(3, '0')}`,
-      subject: newTicket.subject,
-      message: newTicket.message,
-      status: 'open',
-      priority: newTicket.priority,
-      category: newTicket.category,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      attachments: newTicket.attachments.map(f => f.name),
-      messages: [
-        {
-          id: '1',
-          sender: 'user',
-          message: newTicket.message,
-          timestamp: new Date().toISOString(),
-          senderName: 'You'
-        }
-      ]
-    };
-
-    setTickets([ticket, ...tickets]);
-    toast.success('Support ticket created successfully!');
-    closeDrawer();
+    createTicket.mutate(
+      {
+        subject: newTicket.subject,
+        message: newTicket.message,
+        priority: newTicket.priority,
+        category: newTicket.category,
+        attachments: newTicket.attachments,
+      },
+      {
+        onSuccess: () => {
+          toast.success('Support ticket created successfully!');
+          closeDrawer();
+        },
+        onError: (error: unknown) => {
+          const msg = axios.isAxiosError(error)
+            ? (error.response?.data as { message?: string } | undefined)?.message
+            : undefined;
+          toast.error(
+            msg || 'Failed to create support ticket.'
+          );
+        },
+      }
+    );
   };
 
   const handleMarkResolved = (ticketId: string) => {
-    setTickets(
-      tickets.map(t =>
-        t.id === ticketId ? { ...t, status: 'resolved', updatedAt: new Date().toISOString() } : t
-      )
-    );
+    if (selectedTicket?.id === ticketId) {
+      setSelectedTicket({ ...selectedTicket, status: 'resolved', updatedAt: new Date().toISOString() });
+    }
     toast.success('Ticket marked as resolved');
   };
 

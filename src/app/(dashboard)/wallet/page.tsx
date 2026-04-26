@@ -1,17 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-// Data & Types
-import { 
-  Transaction, 
-  PayoutAccount, 
-  mockTransactions, 
-  mockPayoutAccounts 
+import {
+  Transaction,
+  PayoutAccount,
+  mockPayoutAccounts,
 } from "@/data/wallet";
+import { formatMoney } from "@/lib/currency";
+import {
+  useTransactionsInfinite,
+  useTransactionDetail,
+  useWallet,
+} from "@/services/useTransactions";
 
-// Components
 import { WalletHeader } from "@/components/wallet/WalletHeader";
 import { BalanceCards } from "@/components/wallet/BalanceCards";
 import { TransactionHistory } from "@/components/wallet/TransactionHistory";
@@ -21,24 +24,87 @@ import { AddEditPayoutDrawer } from "@/components/wallet/drawers/AddEditPayoutDr
 import { TransactionDetailsDrawer } from "@/components/wallet/drawers/TransactionDetailsDrawer";
 import { WithdrawFundsDrawer } from "@/components/wallet/drawers/WithdrawFundsDrawer";
 
+function isApiNumericTransactionId(id: string): boolean {
+  return /^\d+$/.test(id);
+}
+
 export default function WalletPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
-  const [payoutAccounts, setPayoutAccounts] = useState<PayoutAccount[]>(mockPayoutAccounts);
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [selectedPayoutAccount, setSelectedPayoutAccount] = useState<PayoutAccount | null>(null);
-  
-  const [isTransactionDetailsOpen, setIsTransactionDetailsOpen] = useState(false);
+  const { data: walletData, isLoading: isWalletLoading } = useWallet();
+
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isError,
+    error,
+  } = useTransactionsInfinite();
+
+  const apiTransactions = useMemo(
+    () => data?.pages.flatMap((p) => p.items) ?? [],
+    [data]
+  );
+
+  const [pendingWithdrawals, setPendingWithdrawals] = useState<Transaction[]>(
+    []
+  );
+  const transactions = useMemo(
+    () => [...pendingWithdrawals, ...apiTransactions],
+    [pendingWithdrawals, apiTransactions]
+  );
+
+  const walletCurrency =
+    apiTransactions.find((t) => t.currency)?.currency ?? "GBP";
+
+  const [payoutAccounts, setPayoutAccounts] =
+    useState<PayoutAccount[]>(mockPayoutAccounts);
+  const [selectedPayoutAccount, setSelectedPayoutAccount] =
+    useState<PayoutAccount | null>(null);
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<Transaction | null>(null);
+
+  const [isTransactionDetailsOpen, setIsTransactionDetailsOpen] =
+    useState(false);
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
   const [isPayoutAccountsOpen, setIsPayoutAccountsOpen] = useState(false);
   const [isAddEditPayoutOpen, setIsAddEditPayoutOpen] = useState(false);
 
-  // Date filter state
-  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'>('all');
-  const [customDateFrom, setCustomDateFrom] = useState('');
-  const [customDateTo, setCustomDateTo] = useState('');
+  const [dateFilter, setDateFilter] = useState<
+    "all" | "today" | "yesterday" | "week" | "month" | "custom"
+  >("all");
+  const [customDateFrom, setCustomDateFrom] = useState("");
+  const [customDateTo, setCustomDateTo] = useState("");
   const [showCustomDateInputs, setShowCustomDateInputs] = useState(false);
 
-  // Filter logic
+  const detailQueryId =
+    isTransactionDetailsOpen &&
+    selectedTransaction?.id &&
+    isApiNumericTransactionId(selectedTransaction.id)
+      ? selectedTransaction.id
+      : null;
+
+  const { data: detailTransaction } = useTransactionDetail(
+    detailQueryId,
+    Boolean(detailQueryId)
+  );
+
+  useEffect(() => {
+    if (
+      !detailTransaction ||
+      !isTransactionDetailsOpen ||
+      !detailQueryId ||
+      detailTransaction.id !== detailQueryId
+    ) {
+      return;
+    }
+    setSelectedTransaction(detailTransaction);
+  }, [
+    detailTransaction,
+    detailQueryId,
+    isTransactionDetailsOpen,
+  ]);
+
   const getFilteredTransactions = () => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -49,19 +115,21 @@ export default function WalletPage() {
     const monthAgo = new Date(today);
     monthAgo.setMonth(monthAgo.getMonth() - 1);
 
-    return transactions.filter(transaction => {
-      const txDate = new Date(transaction.date);
-      
+    return transactions.filter((transaction) => {
+      const txDate = transaction.createdAt
+        ? new Date(transaction.createdAt)
+        : new Date(transaction.date);
+
       switch (dateFilter) {
-        case 'today':
+        case "today":
           return txDate >= today;
-        case 'yesterday':
+        case "yesterday":
           return txDate >= yesterday && txDate < today;
-        case 'week':
+        case "week":
           return txDate >= weekAgo;
-        case 'month':
+        case "month":
           return txDate >= monthAgo;
-        case 'custom':
+        case "custom":
           if (customDateFrom && customDateTo) {
             const fromDate = new Date(customDateFrom);
             const toDate = new Date(customDateTo);
@@ -69,7 +137,7 @@ export default function WalletPage() {
             return txDate >= fromDate && txDate <= toDate;
           }
           return true;
-        case 'all':
+        case "all":
         default:
           return true;
       }
@@ -78,28 +146,11 @@ export default function WalletPage() {
 
   const filteredTransactions = getFilteredTransactions();
 
-  // Balance calculations
-  const calculateTotalEarnings = () => 
-    transactions
-      .filter(t => t.type === 'payment' && t.status === 'success')
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+  const availableBalance = walletData?.balance ?? 0;
+  const lifetimeEarnings = walletData?.escrowBalance ?? 0;
 
-  const calculateTotalCommissions = () => 
-    transactions
-      .filter(t => t.type === 'commission' && t.status === 'success')
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-  const calculateTotalWithdrawals = () => 
-    transactions
-      .filter(t => t.type === 'withdrawal' && t.status === 'success')
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-  const availableBalance = (calculateTotalEarnings() - calculateTotalCommissions() - calculateTotalWithdrawals()) + 654;
-  const lifetimeEarnings = calculateTotalEarnings();
-
-  // Handlers
   const handleViewTransaction = (id: string) => {
-    const transaction = transactions.find(t => t.id === id);
+    const transaction = transactions.find((t) => t.id === id);
     if (transaction) {
       setSelectedTransaction(transaction);
       setIsTransactionDetailsOpen(true);
@@ -107,26 +158,39 @@ export default function WalletPage() {
   };
 
   const handleWithdraw = (amount: string, accountId: string) => {
-    const account = payoutAccounts.find(a => a.id === accountId);
+    const account = payoutAccounts.find((a) => a.id === accountId);
     const newTransaction: Transaction = {
-      id: `txn-${Date.now()}`,
-      type: 'withdrawal',
-      title: 'Withdrawal Initialized',
+      id: `local-${Date.now()}`,
+      type: "withdrawal",
+      title: "Withdrawal Initialized",
       description: `Funds transferred to ${account?.name} (${account?.details})`,
-      amount: amount,
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
-      status: 'pending'
+      amount,
+      date: new Date().toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }),
+      time: new Date().toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      }),
+      status: "pending",
+      createdAt: new Date().toISOString(),
+      currency: walletCurrency,
+      amountDisplay: formatMoney(parseFloat(amount) || 0, walletCurrency),
     };
-    setTransactions(prev => [newTransaction, ...prev]);
+    setPendingWithdrawals((prev) => [newTransaction, ...prev]);
     setIsWithdrawOpen(false);
-    toast.success(`Withdrawal of $${amount} initiated!`);
+    toast.success(
+      `Withdrawal of ${formatMoney(parseFloat(amount) || 0, walletCurrency)} initiated!`
+    );
   };
 
   const handleSavePayoutAccount = (accountData: Partial<PayoutAccount>) => {
     if (selectedPayoutAccount) {
-      setPayoutAccounts(prev =>
-        prev.map(a => {
+      setPayoutAccounts((prev) =>
+        prev.map((a) => {
           if (a.id === selectedPayoutAccount.id) return { ...a, ...accountData };
           if (accountData.isDefault) return { ...a, isDefault: false };
           return a;
@@ -136,12 +200,15 @@ export default function WalletPage() {
     } else {
       const newAccount: PayoutAccount = {
         id: `payout-${Date.now()}`,
-        ...accountData
+        ...accountData,
       } as PayoutAccount;
       if (newAccount.isDefault) {
-        setPayoutAccounts(prev => [newAccount, ...prev.map(a => ({ ...a, isDefault: false }))]);
+        setPayoutAccounts((prev) => [
+          newAccount,
+          ...prev.map((a) => ({ ...a, isDefault: false })),
+        ]);
       } else {
-        setPayoutAccounts(prev => [newAccount, ...prev]);
+        setPayoutAccounts((prev) => [newAccount, ...prev]);
       }
       toast.success("Account added successfully!");
     }
@@ -151,26 +218,34 @@ export default function WalletPage() {
   return (
     <div className="">
       <WalletHeader />
-      
-      <BalanceCards 
+
+      {isError && (
+        <div className="mb-5 p-4 rounded-2xl bg-red-50 border border-red-100 font-unageo text-sm text-red-700">
+          Could not load transactions. Check your connection or try again
+          later.
+          {error instanceof Error ? ` (${error.message})` : ""}
+        </div>
+      )}
+
+      <BalanceCards
         availableBalance={availableBalance}
         lifetimeEarnings={lifetimeEarnings}
-        totalCommissions={calculateTotalCommissions()}
-        totalWithdrawals={calculateTotalWithdrawals()}
+        currencyCode={walletData?.currency ?? walletCurrency}
+        isLoading={isWalletLoading}
         onWithdraw={() => setIsWithdrawOpen(true)}
         onViewPayouts={() => setIsPayoutAccountsOpen(true)}
       />
 
-      <TransactionHistory 
+      <TransactionHistory
         transactions={filteredTransactions}
         dateFilter={dateFilter}
         onDateFilterChange={(val) => {
           setDateFilter(val);
-          if (val !== 'custom') setShowCustomDateInputs(false);
+          if (val !== "custom") setShowCustomDateInputs(false);
         }}
         showCustomDateInputs={showCustomDateInputs}
         onCustomDateClick={() => {
-          setDateFilter('custom');
+          setDateFilter("custom");
           setShowCustomDateInputs(true);
         }}
         customDateFrom={customDateFrom}
@@ -179,18 +254,24 @@ export default function WalletPage() {
         setCustomDateTo={setCustomDateTo}
         onApplyCustomRange={() => toast.success("Filter applied!")}
         onClearFilters={() => {
-          setDateFilter('all');
+          setDateFilter("all");
           setShowCustomDateInputs(false);
-          setCustomDateFrom('');
-          setCustomDateTo('');
+          setCustomDateFrom("");
+          setCustomDateTo("");
         }}
         onViewTransaction={handleViewTransaction}
+        isLoading={isLoading}
+        hasNextPage={hasNextPage}
+        isFetchingNextPage={isFetchingNextPage}
+        onLoadMore={() => fetchNextPage()}
       />
 
-      {/* Drawers */}
       <TransactionDetailsDrawer
         isOpen={isTransactionDetailsOpen}
-        onClose={() => setIsTransactionDetailsOpen(false)}
+        onClose={() => {
+          setIsTransactionDetailsOpen(false);
+          setSelectedTransaction(null);
+        }}
         transaction={selectedTransaction}
       />
 
@@ -198,6 +279,7 @@ export default function WalletPage() {
         isOpen={isWithdrawOpen}
         onClose={() => setIsWithdrawOpen(false)}
         availableBalance={availableBalance.toFixed(2)}
+        currencyCode={walletCurrency}
         payoutAccounts={payoutAccounts}
         onConfirm={handleWithdraw}
         onAddPayoutAccount={() => {

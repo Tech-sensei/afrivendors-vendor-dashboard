@@ -18,22 +18,22 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 // Map UI tab names → API status values
 const TAB_STATUS_MAP: Record<AppointmentTabType, VendorAppointment['status']> = {
-  pending:   'pending',
-  upcoming:  'accepted',
-  past:      'completed',
+  pending: 'pending',
+  upcoming: 'accepted',
+  past: 'completed',
   cancelled: 'rejected',
 };
 
 export default function VendorAppointments() {
-  const [activeTab, setActiveTab]         = useState<AppointmentTabType>('upcoming');
+  const [activeTab, setActiveTab] = useState<AppointmentTabType>('upcoming');
   const [selectedAppointment, setSelectedAppointment] = useState<VendorAppointment | null>(null);
 
-  const [isDetailsOpen,           setIsDetailsOpen]           = useState(false);
-  const [isRescheduleOpen,        setIsRescheduleOpen]        = useState(false);
-  const [isMessageOpen,           setIsMessageOpen]           = useState(false);
-  const [isCancelConfirmOpen,     setIsCancelConfirmOpen]     = useState(false);
-  const [isRejectConfirmOpen,     setIsRejectConfirmOpen]     = useState(false);
-  const [isAcceptConfirmOpen,     setIsAcceptConfirmOpen]     = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
+  const [isMessageOpen, setIsMessageOpen] = useState(false);
+  const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
+  const [isRejectConfirmOpen, setIsRejectConfirmOpen] = useState(false);
+  const [isAcceptConfirmOpen, setIsAcceptConfirmOpen] = useState(false);
   const [isMarkCompleteConfirmOpen, setIsMarkCompleteConfirmOpen] = useState(false);
 
   const [filters, setFilters] = useState<AppointmentFiltersState>({
@@ -45,9 +45,9 @@ export default function VendorAppointments() {
 
   // Tab counts
   const counts: Record<AppointmentTabType, number> = {
-    pending:   appointments.filter(a => a.status === 'pending').length,
-    upcoming:  appointments.filter(a => a.status === 'accepted').length,
-    past:      appointments.filter(a => a.status === 'completed').length,
+    pending: appointments.filter(a => a.status === 'pending').length,
+    upcoming: appointments.filter(a => a.status === 'accepted').length,
+    past: appointments.filter(a => a.status === 'completed').length,
     cancelled: appointments.filter(a => a.status === 'rejected').length,
   };
 
@@ -82,14 +82,14 @@ export default function VendorAppointments() {
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
-  const handleViewDetails   = (id: number) => selectAndOpen(id, () => setIsDetailsOpen(true));
-  const handleMessage       = (id: number) => selectAndOpen(id, () => setIsMessageOpen(true));
-  const handleReschedule    = (id: number) => selectAndOpen(id, () => setIsRescheduleOpen(true));
+  const handleViewDetails = (id: number) => selectAndOpen(id, () => setIsDetailsOpen(true));
+  const handleMessage = (id: number) => selectAndOpen(id, () => setIsMessageOpen(true));
+  const handleReschedule = (id: number) => selectAndOpen(id, () => setIsRescheduleOpen(true));
 
-  const handleAcceptClick   = (id: number) => selectAndOpen(id, () => { setIsDetailsOpen(false); setIsAcceptConfirmOpen(true); });
-  const handleRejectClick   = (id: number) => selectAndOpen(id, () => { setIsDetailsOpen(false); setIsRejectConfirmOpen(true); });
+  const handleAcceptClick = (id: number) => selectAndOpen(id, () => { setIsDetailsOpen(false); setIsAcceptConfirmOpen(true); });
+  const handleRejectClick = (id: number) => selectAndOpen(id, () => { setIsDetailsOpen(false); setIsRejectConfirmOpen(true); });
   const handleMarkCompleteClick = (id: number) => selectAndOpen(id, () => { setIsDetailsOpen(false); setIsMarkCompleteConfirmOpen(true); });
-  const handleCancelClick   = () => { setIsDetailsOpen(false); setIsCancelConfirmOpen(true); };
+  const handleCancelClick = () => { setIsDetailsOpen(false); setIsCancelConfirmOpen(true); };
 
   const handleConfirmAccept = () => {
     if (!selectedAppointment) return;
@@ -170,10 +170,10 @@ export default function VendorAppointments() {
             No {activeTab} appointments
           </h3>
           <p className="font-unageo text-accent-60 max-w-sm mx-auto">
-            {activeTab === 'pending'   ? 'No new booking requests at the moment' :
-             activeTab === 'upcoming'  ? 'You have no upcoming appointments scheduled' :
-             activeTab === 'past'      ? 'No completed appointments to show' :
-             'No cancelled appointments'}
+            {activeTab === 'pending' ? 'No new booking requests at the moment' :
+              activeTab === 'upcoming' ? 'You have no upcoming appointments scheduled' :
+                activeTab === 'past' ? 'No completed appointments to show' :
+                  'No cancelled appointments'}
           </p>
         </div>
       ) : (

@@ -3,11 +3,14 @@
 import React, { useState } from "react";
 import { X, ArrowRight, Building2, Smartphone, Plus, AlertCircle } from "lucide-react";
 import { PayoutAccount } from "@/data/wallet";
+import { getCurrencySymbol } from "@/lib/currency";
 
 interface WithdrawFundsDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   availableBalance: string;
+  /** ISO 4217 for input prefix and labels */
+  currencyCode?: string;
   payoutAccounts: PayoutAccount[];
   onConfirm: (amount: string, accountId: string) => void;
   onAddPayoutAccount: () => void;
@@ -17,10 +20,12 @@ export function WithdrawFundsDrawer({
   isOpen,
   onClose,
   availableBalance,
+  currencyCode = "GBP",
   payoutAccounts,
   onConfirm,
   onAddPayoutAccount,
 }: WithdrawFundsDrawerProps) {
+  const currencySymbol = getCurrencySymbol(currencyCode);
   const [amount, setAmount] = useState("");
   const [selectedAccountId, setSelectedAccountId] = useState(
     payoutAccounts.find((a) => a.isDefault)?.id || ""
@@ -115,7 +120,11 @@ export function WithdrawFundsDrawer({
                 </button>
               </div>
               <p className="text-right font-unageo text-xs text-zinc-500">
-                Available: <span className="font-bold text-secondary-000">${availableBalance}</span>
+                Available:{" "}
+                <span className="font-bold text-secondary-000">
+                  {currencySymbol}
+                  {availableBalance}
+                </span>
               </p>
             </div>
 
