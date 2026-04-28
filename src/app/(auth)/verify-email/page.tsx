@@ -95,8 +95,7 @@ const TokenVerifyView = ({ token }: { token: string }) => {
             try {
                 await verifyEmailAsync({ token });
                 setStatus('success');
-                // Vendors go to onboarding after verification, not sign-in
-                setTimeout(() => router.push('/onboarding'), 2000);
+                setTimeout(() => router.push('/sign-in'), 2000);
             } catch {
                 setStatus('error');
             }
@@ -127,7 +126,7 @@ const TokenVerifyView = ({ token }: { token: string }) => {
                     Email verified!
                 </h1>
                 <p className="text-base leading-6 text-accent-80 max-w-[400px]">
-                    Your vendor account is now active. Taking you to onboarding...
+                    Your vendor account is now active. Taking you to sign in...
                 </p>
             </div>
         );

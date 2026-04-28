@@ -13,7 +13,7 @@ const protectedRoutes = [
   '/analytics',
   '/settings',
   '/help-support',
-  '/onboarding',
+  '/kyc-verification',
 ];
 
 const authRoutes = [
@@ -60,9 +60,10 @@ export const config = {
     '/analytics/:path*',
     '/settings/:path*',
     '/help-support/:path*',
-    '/onboarding/:path*',
+    '/kyc-verification',
     '/sign-in',
     '/sign-up',
+    '/sign-up/celebration',
     '/verify-email',
     "/forgot-password",
     "/reset-password",

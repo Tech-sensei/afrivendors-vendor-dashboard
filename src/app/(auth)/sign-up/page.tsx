@@ -1,371 +1,604 @@
-"use client"
-import { useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, ArrowRight, Eye, EyeOff } from 'lucide-react';
-import Image from 'next/image';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, ArrowRight, Eye, EyeOff } from "lucide-react";
+import Image from "next/image";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import imgHeroImage from "../../../../public/assets/images/signUpHeroImg.png";
-import Link from 'next/link';
-import { useAuthAPI } from '@/services/useAuthAPI';
+import Link from "next/link";
+import { useAuthAPI } from "@/services/useAuthAPI";
+import { useVendorCategories } from "@/hooks/useVendorCategories";
+import type { VendorRegisterAccountKind } from "@/types/auth";
 
 const countries = [
-    { code: '+1', name: 'United States', flag: '🇺🇸' },
-    { code: '+44', name: 'United Kingdom', flag: '🇬🇧' },
-    { code: '+234', name: 'Nigeria', flag: '🇳🇬' },
-    { code: '+27', name: 'South Africa', flag: '🇿🇦' },
-    { code: '+254', name: 'Kenya', flag: '🇰🇪' },
-    { code: '+233', name: 'Ghana', flag: '🇬🇭' }
+  { code: "+1", name: "United States", flag: "🇺🇸" },
+  { code: "+44", name: "United Kingdom", flag: "🇬🇧" },
+  { code: "+234", name: "Nigeria", flag: "🇳🇬" },
+  { code: "+27", name: "South Africa", flag: "🇿🇦" },
+  { code: "+254", name: "Kenya", flag: "🇰🇪" },
+  { code: "+233", name: "Ghana", flag: "🇬🇭" },
 ];
 
-const SignUpPageContent = () => {
-    const router = useRouter();
-    const searchParams = useSearchParams();
-    const emailFromParams = searchParams.get('email') || '';
-    const { signUpAsync, isSigningUp } = useAuthAPI();
+type FormErrors = Record<string, string>;
 
-    const [formData, setFormData] = useState({
-        firstName: '',
-        lastName: '',
-        email: emailFromParams,
-        password: '',
-        phoneCode: '+234',
-        phoneNumber: '',
-        country: ''
+export default function SignUpPage() {
+  const router = useRouter();
+  const { signUpAsync, isSigningUp } = useAuthAPI();
+  const { data: categories = [], isLoading: categoriesLoading, isError: categoriesError, refetch: refetchCategories } =
+    useVendorCategories();
+
+  const [accountKind, setAccountKind] = useState<VendorRegisterAccountKind>("individual");
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    phoneCode: "+234",
+    phoneNumber: "",
+    serviceCategoryId: "",
+    businessName: "",
+    businessCategoryId: "",
+    streetAddress: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    country: "",
+  });
+
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+
+  const clearError = (field: string) => {
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
     });
+  };
 
-    const [focused, setFocused] = useState({
-        firstName: false,
-        lastName: false,
-        email: false,
-        password: false,
-        phoneNumber: false
-    });
+  const handleInputChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    clearError(field);
+  };
 
-    const [errors, setErrors] = useState({
-        firstName: '',
-        lastName: '',
-        email: '',
-        password: '',
-        phoneNumber: ''
-    });
+  const validateForm = (): boolean => {
+    const next: FormErrors = {};
 
-    const [showPassword, setShowPassword] = useState(false);
-    const [agreedToTerms, setAgreedToTerms] = useState(false);
+    if (!formData.firstName.trim()) next.firstName = "First name is required";
+    if (!formData.lastName.trim()) next.lastName = "Last name is required";
+    if (!formData.email.trim()) {
+      next.email = "Email address is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      next.email = "Please enter a valid email address";
+    }
+    if (!formData.password) {
+      next.password = "Password is required";
+    } else if (formData.password.length < 8) {
+      next.password = "Password must be at least 8 characters";
+    }
+    if (!formData.confirmPassword) {
+      next.confirmPassword = "Please confirm your password";
+    } else if (formData.confirmPassword !== formData.password) {
+      next.confirmPassword = "Passwords do not match";
+    }
+    if (!formData.phoneNumber.trim()) next.phoneNumber = "Phone number is required";
 
-    const handleInputChange = (field: string, value: string) => {
-        setFormData({ ...formData, [field]: value });
-        if (errors[field as keyof typeof errors]) {
-            setErrors({ ...errors, [field]: '' });
-        }
-    };
+    if (accountKind === "individual") {
+      if (!formData.serviceCategoryId.trim()) next.serviceCategoryId = "Service category is required";
+    } else {
+      if (!formData.businessName.trim()) next.businessName = "Business name is required";
+      if (!formData.businessCategoryId.trim()) next.businessCategoryId = "Business category is required";
+    }
 
-    const handleFocus = (field: keyof typeof focused) => {
-        setFocused({ ...focused, [field]: true });
-    };
+    if (!formData.streetAddress.trim()) next.streetAddress = "Street address is required";
+    if (!formData.city.trim()) next.city = "City is required";
+    if (!formData.state.trim()) next.state = "State is required";
+    if (!formData.zipCode.trim()) next.zipCode = "Zip code is required";
+    if (!formData.country.trim()) next.country = "Country is required";
 
-    const handleBlur = (field: keyof typeof focused) => {
-        setFocused({ ...focused, [field]: false });
-    };
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
 
-    const validateForm = () => {
-        const newErrors = {
-            firstName: '',
-            lastName: '',
-            email: '',
-            password: '',
-            phoneNumber: ''
-        };
+  const handleContinue = async () => {
+    if (!validateForm() || !agreedToTerms) return;
+    try {
+      const serviceCat = categories.find((c) => c.id === Number(formData.serviceCategoryId));
+      const businessCat = categories.find((c) => c.id === Number(formData.businessCategoryId));
+      const payload = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        country: formData.country,
+        password: formData.password,
+        phoneNumber: { code: formData.phoneCode, number: formData.phoneNumber },
+        accountType: "vendor" as const,
+        vendorAccountKind: accountKind,
+        streetAddress: formData.streetAddress,
+        city: formData.city,
+        state: formData.state,
+        zipCode: formData.zipCode,
+        ...(accountKind === "individual"
+          ? {
+              serviceCategoryId: Number(formData.serviceCategoryId),
+              ...(serviceCat?.name ? { serviceCategory: serviceCat.name } : {}),
+            }
+          : {
+              businessName: formData.businessName,
+              businessCategoryId: Number(formData.businessCategoryId),
+              ...(businessCat?.name ? { businessCategory: businessCat.name } : {}),
+            }),
+      };
+      await signUpAsync(payload);
+      router.push(`/sign-up/celebration?email=${encodeURIComponent(formData.email)}`);
+    } catch {
+      // error toast handled inside useAuthAPI
+    }
+  };
 
-        if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
-        if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
-        if (!formData.email.trim()) {
-            newErrors.email = 'Email address is required';
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-            newErrors.email = 'Please enter a valid email address';
-        }
-        if (!formData.password) {
-            newErrors.password = 'Password is required';
-        } else if (formData.password.length < 8) {
-            newErrors.password = 'Password must be at least 8 characters';
-        }
-        if (!formData.phoneNumber.trim()) newErrors.phoneNumber = 'Phone number is required';
+  const requiredFilled =
+    formData.firstName &&
+    formData.lastName &&
+    formData.email &&
+    formData.password &&
+    formData.confirmPassword &&
+    formData.phoneNumber &&
+    formData.streetAddress &&
+    formData.city &&
+    formData.state &&
+    formData.zipCode &&
+    formData.country &&
+    (accountKind === "individual"
+      ? formData.serviceCategoryId
+      : formData.businessName && formData.businessCategoryId) &&
+    !categoriesLoading &&
+    categories.length > 0;
 
-        setErrors(newErrors);
-        return !Object.values(newErrors).some(error => error !== '');
-    };
+  const isDisabled = !requiredFilled || !agreedToTerms || isSigningUp || categoriesLoading || categoriesError;
 
-    const handleContinue = async () => {
-        if (!validateForm() || !agreedToTerms) return;
-        try {
-            await signUpAsync({
-                firstName: formData.firstName,
-                lastName: formData.lastName,
-                email: formData.email,
-                country: formData.country,
-                password: formData.password,
-                phoneNumber: { code: formData.phoneCode, number: formData.phoneNumber },
-                accountType: 'vendor',
-            });
-            // Backend sends a verification link to the email — redirect to "check your inbox" view
-            router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`);
-        } catch {
-            // error toast handled inside useAuthAPI
-        }
-    };
+  const inputClass = (field: string, hasValue: boolean) =>
+    `w-full h-14 px-4 text-base leading-6 text-secondary-000 rounded-lg outline-none transition-all duration-200 ease-out ${
+      hasValue ? "bg-secondary-600" : "bg-secondary-800"
+    } ${errors[field] ? "border border-red-600" : "border border-secondary-200 focus:border-primary-100"}`;
 
-    const isDisabled = !formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.phoneNumber || !formData.country || !agreedToTerms || isSigningUp;
+  return (
+    <div className="min-h-screen bg-white">
+      <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
+        <div className="flex max-h-screen flex-col overflow-y-auto bg-white p-6 md:p-8 lg:p-12">
+          <div className="mx-auto w-full max-w-132">
+            <button
+              type="button"
+              onClick={() => router.push("/sign-in")}
+              aria-label="Go back"
+              className="mb-8 inline-flex cursor-pointer items-center gap-2 rounded-lg border-none bg-transparent p-2 transition-colors duration-200 ease-out hover:bg-secondary-600"
+            >
+              <ArrowLeft className="h-6 w-6 text-secondary-000" />
+            </button>
 
-    return (
-        <div className="min-h-screen bg-white">
-            <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen">
-                {/* Left Column - Form */}
-                <div className="flex flex-col p-6 md:p-8 lg:p-12 overflow-y-auto bg-white max-h-screen">
-                    <div className="max-w-132 w-full mx-auto">
-                        {/* Back Button */}
-                        <button
-                            onClick={() => router.push('/sign-in')}
-                            aria-label="Go back"
-                            className="inline-flex items-center gap-2 mb-8 bg-transparent border-none cursor-pointer p-2 rounded-lg transition-colors duration-200 ease-out hover:bg-secondary-600"
-                        >
-                            <ArrowLeft className="w-6 h-6 text-secondary-000" />
-                        </button>
-
-                        {/* Header */}
-                        <div className="mb-6">
-                            <h2 className="font-unbounded text-[clamp(20px,3vw,24px)] leading-tight font-semibold text-secondary-000 mb-2">
-                                Create a vendor account
-                            </h2>
-                            <p className="text-base leading-6 text-accent-80">
-                                Complete your details to get started on Afrivendors.
-                            </p>
-                        </div>
-
-                        {/* Form */}
-                        <div className="flex flex-col gap-4 mb-12">
-                            {/* First Name */}
-                            <div className="flex flex-col gap-2">
-                                <label htmlFor="firstName" className="text-base leading-6 font-normal text-secondary-000">
-                                    First Name *
-                                </label>
-                                <input
-                                    id="firstName"
-                                    type="text"
-                                    placeholder="e.g John"
-                                    value={formData.firstName}
-                                    onChange={(e) => handleInputChange('firstName', e.target.value)}
-                                    onFocus={() => handleFocus('firstName')}
-                                    onBlur={() => handleBlur('firstName')}
-                                    className={`w-full h-14 px-4 text-base leading-6 text-secondary-000 rounded-lg outline-none transition-all duration-200 ease-out ${formData.firstName ? 'bg-secondary-600' : 'bg-white'} ${errors.firstName ? 'border border-red-600' : focused.firstName ? 'border border-primary-100' : 'border border-secondary-200'}`}
-                                />
-                                {errors.firstName && <p className="text-sm text-red-600">{errors.firstName}</p>}
-                            </div>
-
-                            {/* Last Name */}
-                            <div className="flex flex-col gap-2">
-                                <label htmlFor="lastName" className="text-base leading-6 font-normal text-secondary-000">
-                                    Last Name *
-                                </label>
-                                <input
-                                    id="lastName"
-                                    type="text"
-                                    placeholder="e.g Doe"
-                                    value={formData.lastName}
-                                    onChange={(e) => handleInputChange('lastName', e.target.value)}
-                                    onFocus={() => handleFocus('lastName')}
-                                    onBlur={() => handleBlur('lastName')}
-                                    className={`w-full h-14 px-4 text-base leading-6 text-secondary-000 rounded-lg outline-none transition-all duration-200 ease-out ${formData.lastName ? 'bg-secondary-600' : 'bg-white'} ${errors.lastName ? 'border border-red-600' : focused.lastName ? 'border border-primary-100' : 'border border-secondary-200'}`}
-                                />
-                                {errors.lastName && <p className="text-sm text-red-600">{errors.lastName}</p>}
-                            </div>
-
-                            {/* Email */}
-                            <div className="flex flex-col gap-2">
-                                <label htmlFor="email" className="text-base leading-6 font-normal text-secondary-000">
-                                    Email Address *
-                                </label>
-                                <input
-                                    id="email"
-                                    type="email"
-                                    placeholder="e.g example@email.com"
-                                    value={formData.email}
-                                    onChange={(e) => handleInputChange('email', e.target.value)}
-                                    onFocus={() => handleFocus('email')}
-                                    onBlur={() => handleBlur('email')}
-                                    className={`w-full h-14 px-4 text-base leading-6 text-secondary-000 rounded-lg outline-none transition-all duration-200 ease-out ${formData.email ? 'bg-secondary-600' : 'bg-white'} ${errors.email ? 'border border-red-600' : focused.email ? 'border border-primary-100' : 'border border-secondary-200'}`}
-                                />
-                                {errors.email && <p className="text-sm text-red-600">{errors.email}</p>}
-                            </div>
-
-                            {/* Password */}
-                            <div className="flex flex-col gap-2">
-                                <label htmlFor="password" className="text-base leading-6 font-normal text-secondary-000">
-                                    Password *
-                                </label>
-                                <div className="relative">
-                                    <input
-                                        id="password"
-                                        type={showPassword ? 'text' : 'password'}
-                                        placeholder="**************"
-                                        value={formData.password}
-                                        onChange={(e) => handleInputChange('password', e.target.value)}
-                                        onFocus={() => handleFocus('password')}
-                                        onBlur={() => handleBlur('password')}
-                                        className={`w-full h-14 pl-4 pr-12 text-base leading-6 text-secondary-000 rounded-lg outline-none transition-all duration-200 ease-out ${formData.password ? 'bg-secondary-600' : 'bg-white'} ${errors.password ? 'border border-red-600' : focused.password ? 'border border-primary-100' : 'border border-secondary-200'}`}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        aria-label={showPassword ? 'Hide password' : 'Show password'}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 bg-transparent border-none cursor-pointer p-1 flex items-center justify-center text-secondary-000"
-                                    >
-                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                    </button>
-                                </div>
-                                {errors.password && <p className="text-sm text-red-600">{errors.password}</p>}
-                            </div>
-
-                            {/* Phone Number */}
-                            <div className="flex flex-col gap-2">
-                                <label className="text-base leading-6 font-normal text-secondary-000">
-                                    Phone number
-                                </label>
-                                <div className="flex gap-2.5">
-                                    <Select
-                                        value={formData.phoneCode}
-                                        onValueChange={(value) => handleInputChange('phoneCode', value)}
-                                    >
-                                        <SelectTrigger className={`w-30 py-7 h-14 px-3 text-base leading-6 text-secondary-000 rounded-lg outline-none transition-all duration-200 ease-out bg-white border ${focused.phoneNumber ? 'border-primary-100' : 'border-secondary-200'}`}>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {countries.map((country) => (
-                                                <SelectItem key={country.code} value={country.code}>
-                                                    {country.flag} {country.code}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <input
-                                        type="tel"
-                                        placeholder="Phone number"
-                                        value={formData.phoneNumber}
-                                        onChange={(e) => handleInputChange('phoneNumber', e.target.value.replace(/\D/g, ''))}
-                                        onFocus={() => handleFocus('phoneNumber')}
-                                        onBlur={() => handleBlur('phoneNumber')}
-                                        className={`flex-1 h-14 px-4 text-base leading-6 text-secondary-000 rounded-lg outline-none transition-all duration-200 ease-out ${formData.phoneNumber ? 'bg-secondary-600' : 'bg-white'} ${errors.phoneNumber ? 'border border-red-600' : focused.phoneNumber ? 'border border-primary-100' : 'border border-secondary-200'}`}
-                                    />
-                                </div>
-                                {errors.phoneNumber && <p className="text-sm text-red-600">{errors.phoneNumber}</p>}
-                            </div>
-
-                            {/* Country */}
-                            <div className="flex flex-col gap-2">
-                                <label className="text-base leading-6 font-normal text-secondary-000">
-                                    Country
-                                </label>
-                                <Select
-                                    value={formData.country}
-                                    onValueChange={(value) => handleInputChange('country', value)}
-                                >
-                                    <SelectTrigger className={`w-full py-7 h-14 px-4 text-base leading-6 text-secondary-000 rounded-lg outline-none transition-all duration-200 ease-out ${formData.country ? 'bg-secondary-600' : 'bg-white'} border border-secondary-200`}>
-                                        <SelectValue placeholder="Select country" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {countries.map((country) => (
-                                            <SelectItem key={country.name} value={country.name}>
-                                                {country.flag} {country.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            {/* Terms Checkbox */}
-                            <div className="flex items-start gap-2">
-                                <Checkbox
-                                    id="terms"
-                                    checked={agreedToTerms}
-                                    onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
-                                    className="mt-1"
-                                />
-                                <label htmlFor="terms" className="text-base leading-5 text-accent-100 flex-1 cursor-pointer">
-                                    I agree to the{' '}
-                                    <a href="/terms-of-use" className="text-secondary-000 font-bold underline transition-opacity duration-200 ease-out hover:opacity-70">
-                                        Terms & Conditions
-                                    </a>{' '}
-                                    and{' '}
-                                    <Link href="/privacy-policy" className="text-secondary-000 font-bold underline transition-opacity duration-200 ease-out hover:opacity-70">
-                                        Policies
-                                    </Link>{' '}
-                                    of <strong>Afrivendor.</strong>
-                                </label>
-                            </div>
-
-                            {/* Continue Button */}
-                            <button
-                                onClick={handleContinue}
-                                disabled={isDisabled}
-                                className={`w-full h-14 flex items-center justify-center gap-2 bg-primary-100 border-none rounded-xl cursor-pointer transition-all duration-200 ease-out ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90 active:scale-[0.98]'}`}
-                            >
-                                <span className="text-base leading-5 font-semibold text-white">
-                                    {isSigningUp ? 'Creating account...' : 'Continue'}
-                                </span>
-                                {!isSigningUp && <ArrowRight className="w-4.5 h-4.5 text-white" />}
-                            </button>
-
-                            {/* Sign In Link */}
-                            <div className="text-center pt-1">
-                                <p className="text-base leading-6 text-accent-80">
-                                    Already have an account?{' '}
-                                    <Link href="/sign-in" className="font-semibold text-primary-100 underline transition-opacity duration-200 ease-out hover:opacity-70">
-                                        Sign in
-                                    </Link>
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Footer */}
-                        <div className="max-w-132 w-full mt-4 mx-auto flex items-center justify-between flex-wrap gap-4">
-                            <p className="text-base leading-6 text-accent-80">
-                                © {new Date().getFullYear()} Afrivendors.co.uk ltd
-                            </p>
-                            <button
-                                onClick={() => router.push('/help-support')}
-                                className="text-base leading-5 font-semibold text-secondary-000 bg-transparent border-none cursor-pointer underline p-0 transition-opacity duration-200 ease-out hover:opacity-70"
-                            >
-                                Help & Support
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Right Column - Hero Image */}
-                <div className="hidden lg:block relative bg-secondary-000 overflow-hidden h-screen rounded-bl-[200px]">
-                    <Image
-                        src={imgHeroImage}
-                        alt="Vendor Portal"
-                        fill
-                        sizes="50vw"
-                        className="object-cover object-center"
-                        priority
-                    />
-                    <div className="absolute inset-0 bg-[rgba(29,13,4,0.15)]" />
-                </div>
+            <div className="mb-6">
+              <h2 className="mb-2 font-unbounded text-[clamp(20px,3vw,24px)] font-semibold leading-tight text-secondary-000">
+                Create a vendor account
+              </h2>
+              <p className="text-base leading-6 text-accent-80">Complete your details to get started on Afrivendors.</p>
             </div>
 
-        </div>
-    );
-};
+            <div className="mb-8 flex w-full rounded-full bg-secondary-700 p-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setAccountKind("individual");
+                  setFormData((p) => ({ ...p, businessCategoryId: "" }));
+                }}
+                className={`flex-1 rounded-full py-3.5 text-center text-sm font-semibold transition-colors ${
+                  accountKind === "individual"
+                    ? "bg-secondary-000 text-white"
+                    : "bg-transparent text-secondary-000"
+                }`}
+              >
+                Individual Account
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAccountKind("business");
+                  setFormData((p) => ({ ...p, serviceCategoryId: "" }));
+                }}
+                className={`flex-1 rounded-full py-3.5 text-center text-sm font-semibold transition-colors ${
+                  accountKind === "business" ? "bg-secondary-000 text-white" : "bg-transparent text-secondary-000"
+                }`}
+              >
+                Business Account
+              </button>
+            </div>
 
-const SignUpPage = () => (
-    <Suspense fallback={
-        <div className="min-h-screen bg-accent-10 flex items-center justify-center">
-            <p className="font-unageo text-base text-accent-80">Loading...</p>
-        </div>
-    }>
-        <SignUpPageContent />
-    </Suspense>
-);
+            {categoriesError ? (
+              <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-secondary-000">
+                <p className="mb-2">Could not load categories. Check your connection and try again.</p>
+                <button
+                  type="button"
+                  onClick={() => void refetchCategories()}
+                  className="font-semibold text-primary-100 underline"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : null}
 
-export default SignUpPage;
+            <div className="mb-12 flex flex-col gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="firstName" className="text-base font-normal leading-6 text-secondary-000">
+                    First Name *
+                  </label>
+                  <input
+                    id="firstName"
+                    type="text"
+                    placeholder="e.g. John"
+                    value={formData.firstName}
+                    onChange={(e) => handleInputChange("firstName", e.target.value)}
+                    className={inputClass("firstName", !!formData.firstName)}
+                  />
+                  {errors.firstName ? <p className="text-sm text-red-600">{errors.firstName}</p> : null}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="lastName" className="text-base font-normal leading-6 text-secondary-000">
+                    Last Name *
+                  </label>
+                  <input
+                    id="lastName"
+                    type="text"
+                    placeholder="e.g. Doe"
+                    value={formData.lastName}
+                    onChange={(e) => handleInputChange("lastName", e.target.value)}
+                    className={inputClass("lastName", !!formData.lastName)}
+                  />
+                  {errors.lastName ? <p className="text-sm text-red-600">{errors.lastName}</p> : null}
+                </div>
+              </div>
+
+              {accountKind === "business" ? (
+                <>
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor="businessName" className="text-base font-normal leading-6 text-secondary-000">
+                      Business Name *
+                    </label>
+                    <input
+                      id="businessName"
+                      type="text"
+                      placeholder="Your business name"
+                      value={formData.businessName}
+                      onChange={(e) => handleInputChange("businessName", e.target.value)}
+                      className={inputClass("businessName", !!formData.businessName)}
+                    />
+                    {errors.businessName ? <p className="text-sm text-red-600">{errors.businessName}</p> : null}
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-base font-normal leading-6 text-secondary-000">Business Category *</label>
+                    <Select
+                      value={formData.businessCategoryId}
+                      onValueChange={(value) => handleInputChange("businessCategoryId", value)}
+                      disabled={categoriesLoading || categories.length === 0}
+                    >
+                      <SelectTrigger
+                        className={`h-14 w-full rounded-lg border px-4 py-7 text-base leading-6 text-secondary-000 ${
+                          errors.businessCategoryId ? "border-red-600" : "border-secondary-200"
+                        } ${formData.businessCategoryId ? "bg-secondary-600" : "bg-secondary-800"}`}
+                      >
+                        <SelectValue
+                          placeholder={
+                            categoriesLoading ? "Loading categories…" : categories.length ? "Select category" : "No categories"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((c) => (
+                          <SelectItem key={c.id} value={String(c.id)}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.businessCategoryId ? (
+                      <p className="text-sm text-red-600">{errors.businessCategoryId}</p>
+                    ) : null}
+                  </div>
+                </>
+              ) : null}
+
+              <div className="flex flex-col gap-2">
+                <label htmlFor="email" className="text-base font-normal leading-6 text-secondary-000">
+                  Email *
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="e.g. example@email.com"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange("email", e.target.value)}
+                  className={inputClass("email", !!formData.email)}
+                />
+                {errors.email ? <p className="text-sm text-red-600">{errors.email}</p> : null}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <span className="text-base font-normal leading-6 text-secondary-000">Phone Number *</span>
+                <div className="flex gap-2.5">
+                  <Select value={formData.phoneCode} onValueChange={(value) => handleInputChange("phoneCode", value)}>
+                    <SelectTrigger className="h-14 w-30 rounded-lg border border-secondary-200 bg-white px-3 py-7 text-base leading-6 text-secondary-000">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countries.map((c) => (
+                        <SelectItem key={c.code} value={c.code}>
+                          {c.flag} {c.code}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <input
+                    type="tel"
+                    placeholder="Phone number"
+                    value={formData.phoneNumber}
+                    onChange={(e) => handleInputChange("phoneNumber", e.target.value.replace(/\D/g, ""))}
+                    className={`flex-1 ${inputClass("phoneNumber", !!formData.phoneNumber)}`}
+                  />
+                </div>
+                {errors.phoneNumber ? <p className="text-sm text-red-600">{errors.phoneNumber}</p> : null}
+              </div>
+
+              {accountKind === "individual" ? (
+                <div className="flex flex-col gap-2">
+                  <label className="text-base font-normal leading-6 text-secondary-000">Service Category *</label>
+                  <Select
+                    value={formData.serviceCategoryId}
+                    onValueChange={(value) => handleInputChange("serviceCategoryId", value)}
+                    disabled={categoriesLoading || categories.length === 0}
+                  >
+                    <SelectTrigger
+                      className={`h-14 w-full rounded-lg border px-4 py-7 text-base leading-6 text-secondary-000 ${
+                        errors.serviceCategoryId ? "border-red-600" : "border-secondary-200"
+                      } ${formData.serviceCategoryId ? "bg-secondary-600" : "bg-secondary-800"}`}
+                    >
+                      <SelectValue
+                        placeholder={
+                          categoriesLoading ? "Loading categories…" : categories.length ? "Select service category" : "No categories"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((c) => (
+                        <SelectItem key={c.id} value={String(c.id)}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.serviceCategoryId ? (
+                    <p className="text-sm text-red-600">{errors.serviceCategoryId}</p>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="password" className="text-base font-normal leading-6 text-secondary-000">
+                    Password *
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="**************"
+                      value={formData.password}
+                      onChange={(e) => handleInputChange("password", e.target.value)}
+                      className={`${inputClass("password", !!formData.password)} pr-16`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((s) => !s)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      className="absolute right-4 top-1/2 flex -translate-y-1/2 cursor-pointer items-center justify-center border-none bg-transparent p-1 text-secondary-000"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  {errors.password ? <p className="text-sm text-red-600">{errors.password}</p> : null}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="confirmPassword" className="text-base font-normal leading-6 text-secondary-000">
+                    Confirm Password *
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="**************"
+                      value={formData.confirmPassword}
+                      onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+                      className={`${inputClass("confirmPassword", !!formData.confirmPassword)} pr-16`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword((s) => !s)}
+                      aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                      className="absolute right-4 top-1/2 flex -translate-y-1/2 cursor-pointer items-center justify-center border-none bg-transparent p-1 text-secondary-000"
+                    >
+                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  {errors.confirmPassword ? <p className="text-sm text-red-600">{errors.confirmPassword}</p> : null}
+                </div>
+              </div>
+
+              <div className="mt-2 border-t border-border pt-4">
+                <h3 className="mb-4 font-unbounded text-base font-semibold text-secondary-000">Location</h3>
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor="streetAddress" className="text-base font-normal leading-6 text-secondary-000">
+                      Street Address *
+                    </label>
+                    <input
+                      id="streetAddress"
+                      type="text"
+                      placeholder="Street address"
+                      value={formData.streetAddress}
+                      onChange={(e) => handleInputChange("streetAddress", e.target.value)}
+                      className={inputClass("streetAddress", !!formData.streetAddress)}
+                    />
+                    {errors.streetAddress ? <p className="text-sm text-red-600">{errors.streetAddress}</p> : null}
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div className="flex flex-col gap-2">
+                      <label htmlFor="city" className="text-base font-normal leading-6 text-secondary-000">
+                        City *
+                      </label>
+                      <input
+                        id="city"
+                        type="text"
+                        placeholder="City"
+                        value={formData.city}
+                        onChange={(e) => handleInputChange("city", e.target.value)}
+                        className={inputClass("city", !!formData.city)}
+                      />
+                      {errors.city ? <p className="text-sm text-red-600">{errors.city}</p> : null}
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label htmlFor="state" className="text-base font-normal leading-6 text-secondary-000">
+                        State *
+                      </label>
+                      <input
+                        id="state"
+                        type="text"
+                        placeholder="State"
+                        value={formData.state}
+                        onChange={(e) => handleInputChange("state", e.target.value)}
+                        className={inputClass("state", !!formData.state)}
+                      />
+                      {errors.state ? <p className="text-sm text-red-600">{errors.state}</p> : null}
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label htmlFor="zipCode" className="text-base font-normal leading-6 text-secondary-000">
+                        Zip Code *
+                      </label>
+                      <input
+                        id="zipCode"
+                        type="text"
+                        placeholder="Zip code"
+                        value={formData.zipCode}
+                        onChange={(e) => handleInputChange("zipCode", e.target.value)}
+                        className={inputClass("zipCode", !!formData.zipCode)}
+                      />
+                      {errors.zipCode ? <p className="text-sm text-red-600">{errors.zipCode}</p> : null}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-base font-normal leading-6 text-secondary-000">Country *</label>
+                    <Select value={formData.country} onValueChange={(value) => handleInputChange("country", value)}>
+                      <SelectTrigger
+                        className={`h-14 w-full rounded-lg border px-4 py-7 text-base leading-6 text-secondary-000 ${
+                          errors.country ? "border-red-600" : "border-secondary-200"
+                        } ${formData.country ? "bg-secondary-600" : "bg-secondary-800"}`}
+                      >
+                        <SelectValue placeholder="Select country" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {countries.map((c) => (
+                          <SelectItem key={c.name} value={c.name}>
+                            {c.flag} {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.country ? <p className="text-sm text-red-600">{errors.country}</p> : null}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="terms"
+                  checked={agreedToTerms}
+                  onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                  className="mt-1"
+                />
+                <label htmlFor="terms" className="flex-1 cursor-pointer text-base leading-5 text-accent-100">
+                  I agree to the{" "}
+                  <a
+                    href="/terms-of-use"
+                    className="font-bold text-secondary-000 underline transition-opacity duration-200 ease-out hover:opacity-70"
+                  >
+                    Terms & Conditions
+                  </a>{" "}
+                  and{" "}
+                  <Link
+                    href="/privacy-policy"
+                    className="font-bold text-secondary-000 underline transition-opacity duration-200 ease-out hover:opacity-70"
+                  >
+                    Policies
+                  </Link>{" "}
+                  of <strong>Afrivendor.</strong>
+                </label>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleContinue}
+                disabled={isDisabled}
+                className={`flex h-14 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary-100 transition-all duration-200 ease-out ${
+                  isDisabled ? "cursor-not-allowed opacity-50" : "hover:opacity-90 active:scale-[0.98]"
+                }`}
+              >
+                <span className="text-base font-semibold leading-5 text-white">
+                  {isSigningUp ? "Creating account..." : "Continue"}
+                </span>
+                {!isSigningUp ? <ArrowRight className="h-4.5 w-4.5 text-white" /> : null}
+              </button>
+
+              <div className="pt-1 text-center">
+                <p className="text-base leading-6 text-accent-80">
+                  Already have an account?{" "}
+                  <Link
+                    href="/sign-in"
+                    className="font-semibold text-primary-100 underline transition-opacity duration-200 ease-out hover:opacity-70"
+                  >
+                    Sign in
+                  </Link>
+                </p>
+              </div>
+            </div>
+
+            <div className="mx-auto mt-4 flex max-w-132 flex-wrap items-center justify-between gap-4">
+              <p className="text-base leading-6 text-accent-80">© {new Date().getFullYear()} Afrivendors.co.uk ltd</p>
+              <button
+                type="button"
+                onClick={() => router.push("/help-support")}
+                className="cursor-pointer border-none bg-transparent p-0 text-base font-semibold leading-5 text-secondary-000 underline transition-opacity duration-200 ease-out hover:opacity-70"
+              >
+                Help & Support
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative hidden h-screen overflow-hidden rounded-bl-[200px] bg-secondary-000 lg:block">
+          <Image
+            src={imgHeroImage}
+            alt="Vendor Portal"
+            fill
+            sizes="50vw"
+            className="object-cover object-center"
+            priority
+          />
+          <div className="absolute inset-0 bg-[rgba(29,13,4,0.15)]" />
+        </div>
+      </div>
+    </div>
+  );
+}
+

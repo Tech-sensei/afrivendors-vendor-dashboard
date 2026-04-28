@@ -11,6 +11,7 @@ import type {
   ResetPasswordPayload,
   SignInPayload,
   SignUpPayload,
+  VendorLoginResponse,
   VerifyEmailPayload,
 } from "@/types/auth";
 
@@ -23,7 +24,7 @@ export const useAuthAPI = () => {
   // 🔐 Sign In
   const signInMutation = useMutation({
     mutationFn: async (payload: SignInPayload) => {
-      const response = await http.post("/auth/login", payload);
+      const response = await http.post<VendorLoginResponse>("/auth/login", payload);
       return response.data;
     },
     onSuccess: (data) => {

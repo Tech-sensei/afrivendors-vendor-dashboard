@@ -150,7 +150,6 @@ afrivendors-vendor-dashboard/
 │   │   ├── dashboard/
 │   │   ├── messages/
 │   │   ├── notifications/
-│   │   ├── onboarding/
 │   │   ├── reviews/
 │   │   ├── rfs/
 │   │   ├── services/

@@ -1,6 +1,6 @@
 "use client";
-import { useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { ArrowRight, Eye, EyeOff } from 'lucide-react';
 import Image from 'next/image';
 import GoogleIcon from "../../../../public/assets/icons/google.svg";
@@ -9,12 +9,20 @@ import Link from 'next/link';
 import { z } from 'zod';
 import { signInSchema } from '@/lib/validations/authValidationSchema';
 import { useAuthAPI } from '@/services/useAuthAPI';
+import { savePostKycRedirect } from '@/lib/postKycRedirect';
 
-const SignInPageContent = () => {
+/** `?redirect=` from auth proxy when user was sent here from a protected route (internal paths only). */
+function getSafeRedirectPath(): string | null {
+    if (typeof window === 'undefined') return null;
+    const raw = new URLSearchParams(window.location.search).get('redirect');
+    if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return null;
+    return raw;
+}
+
+export default function SignInPage() {
     const router = useRouter();
-    const searchParams = useSearchParams();
     const { signInAsync, isSigningIn } = useAuthAPI();
-    const [formData, setFormData] = useState({ email: 'jetoka4903@nazisat.com', password: 'Password@123' });
+    const [formData, setFormData] = useState({ email: '', password: '' });
     const [focused, setFocused] = useState({ email: false, password: false });
     const [errors, setErrors] = useState({ email: '', password: '' });
     const [showPassword, setShowPassword] = useState(false);
@@ -43,9 +51,14 @@ const SignInPageContent = () => {
     const handleSignIn = async () => {
         if (!validateForm()) return;
         try {
-            await signInAsync({ email: formData.email, password: formData.password });
-            const redirectTo = searchParams.get("redirect");
-            router.replace(redirectTo || '/');
+            const session = await signInAsync({ email: formData.email, password: formData.password });
+            const kycDone = session?.vendorKyc?.kycSubmitted === true;
+            if (!kycDone) {
+                savePostKycRedirect(getSafeRedirectPath());
+                router.replace('/kyc-verification');
+                return;
+            }
+            router.replace(getSafeRedirectPath() ?? '/');
         } catch {
             // error toast handled inside useAuthAPI
         }
@@ -189,7 +202,7 @@ const SignInPageContent = () => {
                                 <p className="text-base leading-6 text-accent-80">
                                     Don&apos;t have an account?{' '}
                                     <Link
-                                        href={`/sign-up${formData.email ? `?email=${encodeURIComponent(formData.email)}` : ''}`}
+                                        href="/sign-up"
                                         className="font-semibold text-primary-100 underline transition-opacity duration-200 ease-out hover:opacity-70"
                                     >
                                         Create account
@@ -239,16 +252,4 @@ const SignInPageContent = () => {
             </div>
         </div>
     );
-};
-
-const SignInPage = () => (
-    <Suspense fallback={
-        <div className="min-h-screen bg-accent-10 flex items-center justify-center">
-            <p className="font-unageo text-base text-accent-80">Loading...</p>
-        </div>
-    }>
-        <SignInPageContent />
-    </Suspense>
-);
-
-export default SignInPage;
+}

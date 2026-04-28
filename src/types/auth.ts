@@ -73,6 +73,28 @@ export interface SignInPayload {
   password: string;
 }
 
+/** Shape of `POST /auth/login` success body (vendor). */
+export interface VendorLoginKycSnapshot {
+  kycSubmitted: boolean;
+  canReceivePayment?: boolean;
+  canHandlePayout?: boolean;
+}
+
+export interface VendorLoginResponse {
+  id: number;
+  accountType: string;
+  adminRoles: string | null;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  createdAt: string;
+  vendorKyc?: VendorLoginKycSnapshot | null;
+  accessToken?: string;
+  refreshToken?: string;
+}
+
+export type VendorRegisterAccountKind = "individual" | "business";
+
 export interface SignUpPayload {
   firstName: string;
   lastName: string;
@@ -81,6 +103,19 @@ export interface SignUpPayload {
   password: string;
   phoneNumber: AuthPhoneNumber;
   accountType: "vendor";
+  /** Client / extended registration metadata (API may accept or ignore fields). */
+  vendorAccountKind?: VendorRegisterAccountKind;
+  /** Selected category from `GET /categories` (individual vendors). */
+  serviceCategoryId?: number;
+  serviceCategory?: string;
+  businessName?: string;
+  /** Selected category from `GET /categories` (business vendors). */
+  businessCategoryId?: number;
+  businessCategory?: string;
+  streetAddress?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
 }
 
 export interface ForgotPasswordPayload {
