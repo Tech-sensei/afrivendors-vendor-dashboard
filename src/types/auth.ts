@@ -3,10 +3,13 @@
 export interface VendorKyc {
   id: number;
   businessName: string;
-  location: string;
+  location: string | null;
   aboutBusiness: string;
   website: string | null;
   bannerImage: string | null;
+  kycSubmitted?: boolean;
+  canReceivePayment?: boolean;
+  canHandlePayout?: boolean;
   approvalStatus: "pending" | "approved" | "rejected" | "under_review";
   category: {
     id: number;
@@ -42,6 +45,9 @@ export interface VendorAccount {
   adminRoles: string | null;
   createdAt: string;
   updatedAt: string;
+  kycSubmitted?: boolean;
+  canReceivePayment?: boolean;
+  canHandlePayout?: boolean;
 }
 
 // ─── Full profile returned by /vendor/me ─────────────────────────────────────
