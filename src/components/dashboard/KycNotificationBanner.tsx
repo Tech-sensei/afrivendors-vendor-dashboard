@@ -38,7 +38,7 @@ export function KycNotificationBanner() {
     flags.canReceivePayment === false ||
     flags.canHandlePayout === false;
 
-  if (shouldShow || dismissed) return null;
+  if (!shouldShow || dismissed) return null;
 
   const handleCompleteVerification = async () => {
     setIsOpening(true);
