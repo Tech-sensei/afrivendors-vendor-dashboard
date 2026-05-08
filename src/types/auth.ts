@@ -1,9 +1,25 @@
 // ─── Sub-types matching /vendor/me response ───────────────────────────────────
 
+/** Nested `kyc.location` from API (snake_case fields). */
+export interface VendorKycLocationBlock {
+  id?: number;
+  street_address?: string | null;
+  streetAddress?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
+}
+
 export interface VendorKyc {
   id: number;
   businessName: string;
-  location: string | null;
+  /** Legacy string line, or structured block from API. */
+  location: string | VendorKycLocationBlock | null;
+  /** Structured address (when returned by `/vendor/me` after using `/vendor/address`). */
+  streetAddress?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
   aboutBusiness: string;
   website: string | null;
   bannerImage: string | null;
@@ -97,6 +113,14 @@ export interface VendorLoginResponse {
   vendorKyc?: VendorLoginKycSnapshot | null;
   accessToken?: string;
   refreshToken?: string;
+}
+
+/** `POST /auth/refresh` success body (Bearer = refresh token). */
+export interface VendorAuthRefreshResponse {
+  id: number;
+  accessToken: string;
+  refreshToken: string;
+  vendorKyc?: VendorLoginKycSnapshot | null;
 }
 
 export type VendorRegisterAccountKind = "individual" | "business";

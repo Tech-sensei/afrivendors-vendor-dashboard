@@ -1,5 +1,7 @@
 export interface Review {
   id: string;
+  /** Numeric id from API — required for POST /vendor/reply-to-review */
+  reviewId?: number;
   customerName: string;
   customerAvatar: string;
   rating: number;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import axios from "axios";
 import { toast } from "sonner";
 import { Filter, Search } from "lucide-react";
 
@@ -11,6 +12,7 @@ import { ReplyDrawer } from "@/components/reviews/ReplyDrawer";
 import {
   useVendorRatings,
   mapApiReviewToReview,
+  useReplyToReview,
 } from "@/services/useVendorRatings";
 import type { VendorRatingBreakdown } from "@/types/vendorRatings";
 
@@ -24,6 +26,7 @@ const emptyBreakdown: VendorRatingBreakdown = {
 
 export default function ReviewsPage() {
   const { data, isLoading, isError, error } = useVendorRatings();
+  const replyMutation = useReplyToReview();
 
   const [reviews, setReviews] = useState<Review[]>([]);
   const [sortBy, setSortBy] = useState<"recent" | "highest" | "lowest">("recent");
@@ -68,22 +71,29 @@ export default function ReviewsPage() {
   const handleSaveReply = (text: string) => {
     if (!selectedReview) return;
 
-    setReviews((prev) =>
-      prev.map((r) =>
-        r.id === selectedReview.id
-          ? {
-              ...r,
-              vendorReply: {
-                text,
-                date: new Date().toISOString().split("T")[0],
-              },
-            }
-          : r
-      )
-    );
+    const reviewId =
+      selectedReview.reviewId ??
+      (Number.isFinite(Number(selectedReview.id)) ? Number(selectedReview.id) : NaN);
 
-    toast.success("Response saved locally. Sync with the server when reply API is available.");
-    setIsReplyDrawerOpen(false);
+    replyMutation.mutate(
+      { reply: text.trim(), reviewId },
+      {
+        onSuccess: () => {
+          toast.success("Reply posted successfully!");
+          setIsReplyDrawerOpen(false);
+          setSelectedReview(null);
+        },
+        onError: (err: unknown) => {
+          let msg = "Could not post reply.";
+          if (err instanceof Error) msg = err.message;
+          else if (axios.isAxiosError(err)) {
+            const d = err.response?.data as { message?: string } | undefined;
+            if (d?.message) msg = String(d.message);
+          }
+          toast.error(msg);
+        },
+      }
+    );
   };
 
   const handleDeleteReply = (reviewId: string) => {
@@ -259,6 +269,7 @@ export default function ReviewsPage() {
         onClose={() => setIsReplyDrawerOpen(false)}
         review={selectedReview}
         onSave={handleSaveReply}
+        isSubmitting={replyMutation.isPending}
       />
     </div>
   );

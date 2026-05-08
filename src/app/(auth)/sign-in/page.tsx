@@ -22,7 +22,7 @@ function getSafeRedirectPath(): string | null {
 export default function SignInPage() {
     const router = useRouter();
     const { signInAsync, isSigningIn } = useAuthAPI();
-    const [formData, setFormData] = useState({ email: '', password: '' });
+    const [formData, setFormData] = useState({ email: 'jetoka4903@nazisat.com', password: 'Password@123' });
     const [focused, setFocused] = useState({ email: false, password: false });
     const [errors, setErrors] = useState({ email: '', password: '' });
     const [showPassword, setShowPassword] = useState(false);

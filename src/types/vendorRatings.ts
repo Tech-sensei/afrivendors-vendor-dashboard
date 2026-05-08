@@ -16,6 +16,14 @@ export type VendorRatingReviewApi = {
   reviewText?: string;
   comment?: string;
   review?: string;
+  /** Top-level reply from GET /vendor/ratings — null means vendor has not replied yet. */
+  reply?: string | null;
+  replyAt?: string | null;
+  user?: {
+    id?: number;
+    firstName?: string;
+    lastName?: string;
+  } | null;
   customerName?: string;
   customer_name?: string;
   customerAvatar?: string;

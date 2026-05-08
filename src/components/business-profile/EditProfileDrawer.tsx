@@ -1,9 +1,7 @@
 
 import React from 'react';
 import { X, Save } from 'lucide-react';
-import { BusinessProfile, businessCategories } from '@/data/business-profile';
-
-type DrawerType = 'basic' | 'description' | 'gallery' | 'location' | 'contact' | 'hours' | null;
+type DrawerType = 'description' | 'gallery' | 'location' | 'hours' | null;
 
 interface EditProfileDrawerProps {
   isOpen: boolean;
@@ -12,6 +10,7 @@ interface EditProfileDrawerProps {
   onSave: (data: any) => void;
   data: any;
   setData: (data: any) => void;
+  isSaving?: boolean;
 }
 
 export function EditProfileDrawer({
@@ -20,14 +19,13 @@ export function EditProfileDrawer({
   onClose,
   onSave,
   data,
-  setData
+  setData,
+  isSaving = false,
 }: EditProfileDrawerProps) {
   const getTitle = () => {
     switch (type) {
-      case 'basic': return 'Edit Basic Information';
       case 'description': return 'Edit Description';
       case 'location': return 'Edit Location';
-      case 'contact': return 'Edit Contact Information';
       case 'hours': return 'Edit Opening Hours';
       default: return 'Edit Profile';
     }
@@ -35,10 +33,8 @@ export function EditProfileDrawer({
 
   const getSubtitle = () => {
     switch (type) {
-      case 'basic': return 'Update your business name, owner, and category';
       case 'description': return 'Tell customers about your business';
       case 'location': return 'Update your business address';
-      case 'contact': return 'Update how customers can reach you';
       case 'hours': return 'Set your business operating hours';
       default: return '';
     }
@@ -86,54 +82,6 @@ export function EditProfileDrawer({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-8 pb-8 space-y-7 custom-scrollbar">
-          {type === 'basic' && (
-            <div className="space-y-6">
-              <div>
-                <label className="block font-unageo text-sm font-semibold text-secondary-000 mb-2 uppercase tracking-widest text-zinc-400">
-                  Business Name
-                </label>
-                <input
-                  type="text"
-                  value={data.businessName || ''}
-                  onChange={(e) => setData({ ...data, businessName: e.target.value })}
-                  className="w-full px-5 py-4 rounded-2xl border-2 border-zinc-200 bg-white focus:border-primary-100 focus:ring-0 outline-none font-unageo text-[15px] transition-all"
-                />
-              </div>
-              <div>
-                <label className="block font-unageo text-sm font-semibold text-secondary-000 mb-2 uppercase tracking-widest text-zinc-400">
-                  Owner Name
-                </label>
-                <input
-                  type="text"
-                  value={data.ownerName || ''}
-                  onChange={(e) => setData({ ...data, ownerName: e.target.value })}
-                  className="w-full px-5 py-4 rounded-2xl border-2 border-zinc-200 bg-white focus:border-primary-100 focus:ring-0 outline-none font-unageo text-[15px] transition-all"
-                />
-              </div>
-              <div>
-                <label className="block font-unageo text-sm font-semibold text-secondary-000 mb-2 uppercase tracking-widest text-zinc-400">
-                  Category
-                </label>
-                <div className="relative">
-                  <select
-                    value={data.category || ''}
-                    onChange={(e) => setData({ ...data, category: e.target.value })}
-                    className="w-full px-5 py-4 rounded-2xl border-2 border-zinc-200 bg-white focus:border-primary-100 focus:ring-0 outline-none font-unageo text-[15px] transition-all appearance-none cursor-pointer"
-                  >
-                    {businessCategories.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-accent-60">
-                    <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
           {type === 'description' && (
             <div>
               <label className="block font-unageo text-sm font-semibold text-secondary-000 mb-2 uppercase tracking-widest text-zinc-400">
@@ -160,8 +108,8 @@ export function EditProfileDrawer({
                 </label>
                 <input
                   type="text"
-                  value={data.address || ''}
-                  onChange={(e) => setData({ ...data, address: e.target.value })}
+                  value={data.streetAddress || ''}
+                  onChange={(e) => setData({ ...data, streetAddress: e.target.value })}
                   className="w-full px-5 py-4 rounded-2xl border-2 border-zinc-200 bg-white focus:border-primary-100 focus:ring-0 outline-none font-unageo text-[15px] transition-all"
                 />
               </div>
@@ -195,49 +143,21 @@ export function EditProfileDrawer({
                 </label>
                 <input
                   type="text"
-                  value={data.zipCode || ''}
-                  onChange={(e) => setData({ ...data, zipCode: e.target.value })}
+                  inputMode="text"
+                  autoComplete="postal-code"
+                  maxLength={6}
+                  value={data.zip || ''}
+                  onChange={(e) =>
+                    setData({
+                      ...data,
+                      zip: e.target.value.slice(0, 6),
+                    })
+                  }
                   className="w-full px-5 py-4 rounded-2xl border-2 border-zinc-200 bg-white focus:border-primary-100 focus:ring-0 outline-none font-unageo text-[15px] transition-all"
                 />
-              </div>
-            </div>
-          )}
-
-          {type === 'contact' && (
-            <div className="space-y-6">
-              <div>
-                <label className="block font-unageo text-sm font-semibold text-secondary-000 mb-2 uppercase tracking-widest text-zinc-400">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  value={data.phone || ''}
-                  onChange={(e) => setData({ ...data, phone: e.target.value })}
-                  className="w-full px-5 py-4 rounded-2xl border-2 border-zinc-200 bg-white focus:border-primary-100 focus:ring-0 outline-none font-unageo text-[15px] transition-all"
-                />
-              </div>
-              <div>
-                <label className="block font-unageo text-sm font-semibold text-secondary-000 mb-2 uppercase tracking-widest text-zinc-400">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  value={data.email || ''}
-                  onChange={(e) => setData({ ...data, email: e.target.value })}
-                  className="w-full px-5 py-4 rounded-2xl border-2 border-zinc-200 bg-white focus:border-primary-100 focus:ring-0 outline-none font-unageo text-[15px] transition-all"
-                />
-              </div>
-              <div>
-                <label className="block font-unageo text-sm font-semibold text-secondary-000 mb-2 uppercase tracking-widest text-zinc-400">
-                  Website
-                </label>
-                <input
-                  type="text"
-                  value={data.website || ''}
-                  onChange={(e) => setData({ ...data, website: e.target.value })}
-                  placeholder="www.yourbusiness.com"
-                  className="w-full px-5 py-4 rounded-2xl border-2 border-zinc-200 bg-white focus:border-primary-100 focus:ring-0 outline-none font-unageo text-[15px] transition-all"
-                />
+                <p className="mt-2 font-unageo text-xs text-accent-60">
+                  Maximum 6 characters ({(data.zip || '').length}/6)
+                </p>
               </div>
             </div>
           )}
@@ -310,17 +230,19 @@ export function EditProfileDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-3.5 rounded-2xl border-2 border-zinc-200 bg-white hover:bg-zinc-50 text-secondary-50 font-unageo text-[15px] font-bold transition-all"
+            disabled={isSaving}
+            className="px-6 py-3.5 rounded-2xl border-2 border-zinc-200 bg-white hover:bg-zinc-50 text-secondary-50 font-unageo text-[15px] font-bold transition-all disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={onSave}
-            className="flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-primary-100 text-white hover:bg-primary-200 hover:shadow-lg hover:shadow-primary-100/20 font-unageo text-[15px] font-bold transition-all"
+            disabled={isSaving}
+            className="flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-primary-100 text-white hover:bg-primary-200 hover:shadow-lg hover:shadow-primary-100/20 font-unageo text-[15px] font-bold transition-all disabled:opacity-50"
           >
             <Save size={18} />
-            Save Changes
+            {isSaving ? 'Saving…' : 'Save Changes'}
           </button>
         </div>
       </div>

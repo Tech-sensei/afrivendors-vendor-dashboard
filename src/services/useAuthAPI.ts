@@ -4,6 +4,7 @@ import http from "@/lib/http";
 import { toast } from "sonner";
 import { useAppDispatch } from "@/store/hooks";
 import { clearAuth, fetchUserProfile, setProfile } from "@/store/authSlice";
+import useStreamChat from "@/hooks/useStreamChat";
 import type {
   ChangePasswordPayload,
   ForgotPasswordPayload,
@@ -20,6 +21,7 @@ import type {
 export const useAuthAPI = () => {
   const queryClient = useQueryClient();
   const dispatch = useAppDispatch();
+  const { disconnectUser } = useStreamChat();
 
   // 🔐 Sign In
   const signInMutation = useMutation({
@@ -29,10 +31,10 @@ export const useAuthAPI = () => {
     },
     onSuccess: (data) => {
       if (data?.accessToken) {
-        setCookie(null, "accessToken", data.accessToken, { maxAge: 60 * 60, path: "/" });
+        setCookie(null, "accessToken", data.accessToken, { maxAge: 30 * 60, path: "/" });
       }
       if (data?.refreshToken) {
-        setCookie(null, "refreshToken", data.refreshToken, { maxAge: 60 * 60 * 24 * 7, path: "/" });
+        setCookie(null, "refreshToken", data.refreshToken, { maxAge: 24 * 60 * 60, path: "/" });
       }
       dispatch(fetchUserProfile());
       toast.success("Welcome back!");
@@ -165,6 +167,7 @@ export const useAuthAPI = () => {
       destroyCookie(null, "refreshToken", { path: "/" });
       dispatch(clearAuth());
       queryClient.clear();
+      void disconnectUser();
       toast.success("You've been signed out.");
     },
     onError: (error: any) => {

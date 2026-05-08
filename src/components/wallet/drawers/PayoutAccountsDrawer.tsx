@@ -1,13 +1,17 @@
 "use client";
 
 import React from "react";
-import { X, Building2, Smartphone, Plus, Check, CreditCard } from "lucide-react";
+import { X, Smartphone, Plus, Check, CreditCard, Loader2 } from "lucide-react";
 import { PayoutAccount } from "@/data/wallet";
 
 interface PayoutAccountsDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   accounts: PayoutAccount[];
+  /** True while `GET /vendor/accounts` is in flight */
+  isLoading?: boolean;
+  /** True while Stripe Connect link is being created */
+  isConnecting?: boolean;
   onAddAccount: () => void;
 }
 
@@ -15,6 +19,8 @@ export function PayoutAccountsDrawer({
   isOpen,
   onClose,
   accounts,
+  isLoading = false,
+  isConnecting = false,
   onAddAccount,
 }: PayoutAccountsDrawerProps) {
   return (
@@ -57,15 +63,30 @@ export function PayoutAccountsDrawer({
         <div className="flex-1 overflow-y-auto px-8 pb-8 custom-scrollbar">
           {/* Add New Account Button */}
           <button
+            type="button"
+            disabled={isConnecting}
             onClick={onAddAccount}
-            className="w-full mb-6 py-4 px-6 bg-primary-100 text-white font-unageo text-base font-bold rounded-[16px] flex items-center justify-center gap-2 hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer shadow-lg shadow-primary-100/20"
+            className="w-full mb-6 py-4 px-6 bg-primary-100 text-white font-unageo text-base font-bold rounded-[16px] flex items-center justify-center gap-2 hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer shadow-lg shadow-primary-100/20 disabled:opacity-70 disabled:cursor-wait"
           >
-            <Plus className="w-5 h-5" />
-            Add New Payout Account
+            {isConnecting ? (
+              <Loader2 className="w-5 h-5 animate-spin shrink-0" aria-hidden />
+            ) : (
+              <Plus className="w-5 h-5 shrink-0" aria-hidden />
+            )}
+            {isConnecting ? "Opening Stripe…" : "Add New Payout Account"}
           </button>
 
           <div className="grid gap-4">
-            {accounts.length === 0 ? (
+            {isLoading ? (
+              <div className="space-y-4">
+                {[1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="h-24 rounded-[24px] border border-zinc-100 bg-zinc-50 animate-pulse"
+                  />
+                ))}
+              </div>
+            ) : accounts.length === 0 ? (
               <div className="p-12 border-2 border-dashed border-zinc-200 rounded-[24px] text-center bg-zinc-50/30">
                 <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 border border-zinc-100 shadow-sm text-zinc-300">
                   <Plus className="w-8 h-8" />

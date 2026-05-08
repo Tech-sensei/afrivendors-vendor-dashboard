@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { X, ArrowRight, Building2, Smartphone, Plus, AlertCircle } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { X, ArrowRight, Building2, Smartphone, Plus, AlertCircle, Loader2 } from "lucide-react";
 import { PayoutAccount } from "@/data/wallet";
 import { getCurrencySymbol } from "@/lib/currency";
 
@@ -14,6 +14,8 @@ interface WithdrawFundsDrawerProps {
   payoutAccounts: PayoutAccount[];
   onConfirm: (amount: string, accountId: string) => void;
   onAddPayoutAccount: () => void;
+  /** True while Stripe Connect account link is loading */
+  isConnectingPayout?: boolean;
 }
 
 export function WithdrawFundsDrawer({
@@ -24,12 +26,20 @@ export function WithdrawFundsDrawer({
   payoutAccounts,
   onConfirm,
   onAddPayoutAccount,
+  isConnectingPayout = false,
 }: WithdrawFundsDrawerProps) {
   const currencySymbol = getCurrencySymbol(currencyCode);
   const [amount, setAmount] = useState("");
   const [selectedAccountId, setSelectedAccountId] = useState(
     payoutAccounts.find((a) => a.isDefault)?.id || ""
   );
+
+  useEffect(() => {
+    setSelectedAccountId((current) => {
+      if (current && payoutAccounts.some((a) => a.id === current)) return current;
+      return payoutAccounts.find((a) => a.isDefault)?.id || payoutAccounts[0]?.id || "";
+    });
+  }, [payoutAccounts]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,11 +146,16 @@ export function WithdrawFundsDrawer({
                 </label>
                 <button
                   type="button"
+                  disabled={isConnectingPayout}
                   onClick={onAddPayoutAccount}
-                  className="flex items-center gap-1.5 text-xs font-bold text-primary-100 hover:text-primary-100/80 transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 text-xs font-bold text-primary-100 hover:text-primary-100/80 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-wait"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  Add New
+                  {isConnectingPayout ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" aria-hidden />
+                  ) : (
+                    <Plus className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                  )}
+                  {isConnectingPayout ? "Opening…" : "Add New"}
                 </button>
               </div>
 

@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit";
 import http from "@/lib/http";
-import type { AuthState, VendorProfile } from "@/types/auth";
+import type { AuthState, VendorLoginKycSnapshot, VendorProfile } from "@/types/auth";
 
 const initialState: AuthState = {
   profile: null,
@@ -36,6 +36,30 @@ const authSlice = createSlice({
       state.profile = action.payload;
       state.isAuthenticated = true;
     },
+    /** After `/auth/refresh`, merge KYC flags without a full `/vendor/me` round-trip. */
+    mergeVendorKycFromRefresh: (
+      state,
+      action: PayloadAction<{ vendorKyc?: VendorLoginKycSnapshot | null }>
+    ) => {
+      const k = action.payload.vendorKyc;
+      if (!k || !state.profile) return;
+      state.profile.vendor.kycSubmitted = k.kycSubmitted;
+      if (k.canReceivePayment !== undefined) {
+        state.profile.vendor.canReceivePayment = k.canReceivePayment;
+      }
+      if (k.canHandlePayout !== undefined) {
+        state.profile.vendor.canHandlePayout = k.canHandlePayout;
+      }
+      if (state.profile.kyc) {
+        state.profile.kyc.kycSubmitted = k.kycSubmitted;
+        if (k.canReceivePayment !== undefined) {
+          state.profile.kyc.canReceivePayment = k.canReceivePayment;
+        }
+        if (k.canHandlePayout !== undefined) {
+          state.profile.kyc.canHandlePayout = k.canHandlePayout;
+        }
+      }
+    },
     clearAuth: (state) => {
       state.profile = null;
       state.isAuthenticated = false;
@@ -62,5 +86,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { setProfile, clearAuth } = authSlice.actions;
+export const { setProfile, mergeVendorKycFromRefresh, clearAuth } = authSlice.actions;
 export default authSlice.reducer;

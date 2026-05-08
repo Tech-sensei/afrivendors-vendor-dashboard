@@ -3,8 +3,9 @@
 import { useEffect, useRef } from "react";
 import { parseCookies } from "nookies";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { clearAuth, fetchUserProfile } from "@/store/authSlice";
+import { clearAuth, fetchUserProfile, mergeVendorKycFromRefresh } from "@/store/authSlice";
 import { redirectToSignIn } from "@/lib/http";
+import { performTokenRefresh } from "@/lib/authRefresh";
 
 function getTokenExpiry(token: string): number | null {
   try {
@@ -15,41 +16,86 @@ function getTokenExpiry(token: string): number | null {
   }
 }
 
+/** Refresh ~30s before access JWT expiry so sessions stay seamless. */
+const REFRESH_BEFORE_EXPIRY_MS = 30_000;
+
 export default function AuthInitializer({ children }: { children: React.ReactNode }) {
   const dispatch = useAppDispatch();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const { accessToken } = parseCookies();
+    const clearTimer = () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
 
-    if (!accessToken) {
-      if (isAuthenticated) dispatch(clearAuth());
-      return;
-    }
+    const scheduleProactiveRefresh = (accessToken: string) => {
+      clearTimer();
+      const expiryMs = getTokenExpiry(accessToken);
+      if (expiryMs === null) return;
 
-    const expiryMs = getTokenExpiry(accessToken);
-    const now = Date.now();
+      const now = Date.now();
+      const delay = Math.max(0, expiryMs - now - REFRESH_BEFORE_EXPIRY_MS);
 
-    if (expiryMs !== null && expiryMs <= now) {
-      // Token is already expired — log out immediately
-      redirectToSignIn();
-      return;
-    }
-
-    // Token is valid — fetch profile
-    dispatch(fetchUserProfile());
-
-    // Schedule proactive logout when token expires
-    if (expiryMs !== null) {
-      const delay = expiryMs - now;
-      timerRef.current = setTimeout(() => {
-        redirectToSignIn();
+      timerRef.current = setTimeout(async () => {
+        const { refreshToken } = parseCookies();
+        if (!refreshToken) {
+          redirectToSignIn();
+          return;
+        }
+        const body = await performTokenRefresh();
+        if (!body?.accessToken) {
+          redirectToSignIn();
+          return;
+        }
+        dispatch(mergeVendorKycFromRefresh({ vendorKyc: body.vendorKyc }));
+        scheduleProactiveRefresh(body.accessToken);
       }, delay);
+    };
+
+    async function bootstrap() {
+      const { accessToken, refreshToken } = parseCookies();
+
+      if (!accessToken && !refreshToken) {
+        if (isAuthenticated) dispatch(clearAuth());
+        return;
+      }
+
+      const now = Date.now();
+      const accessExpired =
+        !accessToken ||
+        (() => {
+          const exp = getTokenExpiry(accessToken);
+          return exp !== null && exp <= now;
+        })();
+
+      if (accessExpired) {
+        if (!refreshToken) {
+          redirectToSignIn();
+          return;
+        }
+        const body = await performTokenRefresh();
+        if (!body?.accessToken) {
+          redirectToSignIn();
+          return;
+        }
+        dispatch(mergeVendorKycFromRefresh({ vendorKyc: body.vendorKyc }));
+        dispatch(fetchUserProfile());
+        scheduleProactiveRefresh(body.accessToken);
+        return;
+      }
+
+      dispatch(fetchUserProfile());
+      scheduleProactiveRefresh(accessToken);
     }
+
+    void bootstrap();
 
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      clearTimer();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

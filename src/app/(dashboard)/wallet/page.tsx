@@ -1,26 +1,26 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import axios from "axios";
 import { toast } from "sonner";
 
-import {
-  Transaction,
-  PayoutAccount,
-  mockPayoutAccounts,
-} from "@/data/wallet";
+import { Transaction } from "@/data/wallet";
 import { formatMoney } from "@/lib/currency";
 import {
   useTransactionsInfinite,
   useTransactionDetail,
   useWallet,
 } from "@/services/useTransactions";
+import {
+  useStripeConnectAccountLink,
+  useVendorPayoutAccounts,
+} from "@/services/useVendorPayoutAccounts";
 
 import { WalletHeader } from "@/components/wallet/WalletHeader";
 import { BalanceCards } from "@/components/wallet/BalanceCards";
 import { TransactionHistory } from "@/components/wallet/TransactionHistory";
 
 import { PayoutAccountsDrawer } from "@/components/wallet/drawers/PayoutAccountsDrawer";
-import { AddEditPayoutDrawer } from "@/components/wallet/drawers/AddEditPayoutDrawer";
 import { TransactionDetailsDrawer } from "@/components/wallet/drawers/TransactionDetailsDrawer";
 import { WithdrawFundsDrawer } from "@/components/wallet/drawers/WithdrawFundsDrawer";
 
@@ -30,6 +30,12 @@ function isApiNumericTransactionId(id: string): boolean {
 
 export default function WalletPage() {
   const { data: walletData, isLoading: isWalletLoading } = useWallet();
+  const {
+    data: payoutAccounts = [],
+    isLoading: isPayoutAccountsLoading,
+  } = useVendorPayoutAccounts();
+
+  const stripeConnectMutation = useStripeConnectAccountLink();
 
   const {
     data,
@@ -57,10 +63,6 @@ export default function WalletPage() {
   const walletCurrency =
     apiTransactions.find((t) => t.currency)?.currency ?? "GBP";
 
-  const [payoutAccounts, setPayoutAccounts] =
-    useState<PayoutAccount[]>(mockPayoutAccounts);
-  const [selectedPayoutAccount, setSelectedPayoutAccount] =
-    useState<PayoutAccount | null>(null);
   const [selectedTransaction, setSelectedTransaction] =
     useState<Transaction | null>(null);
 
@@ -68,7 +70,6 @@ export default function WalletPage() {
     useState(false);
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
   const [isPayoutAccountsOpen, setIsPayoutAccountsOpen] = useState(false);
-  const [isAddEditPayoutOpen, setIsAddEditPayoutOpen] = useState(false);
 
   const [dateFilter, setDateFilter] = useState<
     "all" | "today" | "yesterday" | "week" | "month" | "custom"
@@ -187,32 +188,26 @@ export default function WalletPage() {
     );
   };
 
-  const handleSavePayoutAccount = (accountData: Partial<PayoutAccount>) => {
-    if (selectedPayoutAccount) {
-      setPayoutAccounts((prev) =>
-        prev.map((a) => {
-          if (a.id === selectedPayoutAccount.id) return { ...a, ...accountData };
-          if (accountData.isDefault) return { ...a, isDefault: false };
-          return a;
-        })
-      );
-      toast.success("Account updated successfully!");
-    } else {
-      const newAccount: PayoutAccount = {
-        id: `payout-${Date.now()}`,
-        ...accountData,
-      } as PayoutAccount;
-      if (newAccount.isDefault) {
-        setPayoutAccounts((prev) => [
-          newAccount,
-          ...prev.map((a) => ({ ...a, isDefault: false })),
-        ]);
-      } else {
-        setPayoutAccounts((prev) => [newAccount, ...prev]);
-      }
-      toast.success("Account added successfully!");
-    }
-    setIsAddEditPayoutOpen(false);
+  const handleStripeConnectPayout = () => {
+    stripeConnectMutation.mutate(undefined, {
+      onSuccess: (url) => {
+        setIsWithdrawOpen(false);
+        setIsPayoutAccountsOpen(false);
+        window.location.href = url;
+      },
+      onError: (err: unknown) => {
+        let msg = "Could not open Stripe. Please try again.";
+        if (axios.isAxiosError(err)) {
+          const d = err.response?.data as
+            | { message?: string; responseMessage?: string }
+            | undefined;
+          const m = d?.message ?? d?.responseMessage;
+          if (m) msg = Array.isArray(m) ? m.join(", ") : String(m);
+          else if (err.message) msg = err.message;
+        } else if (err instanceof Error) msg = err.message;
+        toast.error(msg);
+      },
+    });
   };
 
   return (
@@ -282,26 +277,17 @@ export default function WalletPage() {
         currencyCode={walletCurrency}
         payoutAccounts={payoutAccounts}
         onConfirm={handleWithdraw}
-        onAddPayoutAccount={() => {
-          setIsWithdrawOpen(false);
-          setIsAddEditPayoutOpen(true);
-        }}
+        isConnectingPayout={stripeConnectMutation.isPending}
+        onAddPayoutAccount={handleStripeConnectPayout}
       />
 
       <PayoutAccountsDrawer
         isOpen={isPayoutAccountsOpen}
         onClose={() => setIsPayoutAccountsOpen(false)}
         accounts={payoutAccounts}
-        onAddAccount={() => {
-          setSelectedPayoutAccount(null);
-          setIsAddEditPayoutOpen(true);
-        }}
-      />
-
-      <AddEditPayoutDrawer
-        isOpen={isAddEditPayoutOpen}
-        onClose={() => setIsAddEditPayoutOpen(false)}
-        onSave={handleSavePayoutAccount}
+        isLoading={isPayoutAccountsLoading}
+        isConnecting={stripeConnectMutation.isPending}
+        onAddAccount={handleStripeConnectPayout}
       />
     </div>
   );

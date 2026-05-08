@@ -9,9 +9,16 @@ interface ReplyDrawerProps {
   onClose: () => void;
   review: Review | null;
   onSave: (text: string) => void;
+  isSubmitting?: boolean;
 }
 
-export function ReplyDrawer({ isOpen, onClose, review, onSave }: ReplyDrawerProps) {
+export function ReplyDrawer({
+  isOpen,
+  onClose,
+  review,
+  onSave,
+  isSubmitting = false,
+}: ReplyDrawerProps) {
   const [replyText, setReplyText] = useState("");
 
   useEffect(() => {
@@ -24,7 +31,7 @@ export function ReplyDrawer({ isOpen, onClose, review, onSave }: ReplyDrawerProp
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (replyText.trim()) {
+    if (replyText.trim() && !isSubmitting) {
       onSave(replyText);
     }
   };
@@ -159,21 +166,26 @@ export function ReplyDrawer({ isOpen, onClose, review, onSave }: ReplyDrawerProp
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-4 px-6 bg-white border border-accent-20 text-secondary-000 font-unageo text-base font-bold rounded-2xl transition-all hover:bg-secondary-700 hover:border-accent-40 cursor-pointer shadow-sm"
+              disabled={isSubmitting}
+              className="flex-1 py-4 px-6 bg-white border border-accent-20 text-secondary-000 font-unageo text-base font-bold rounded-2xl transition-all hover:bg-secondary-700 hover:border-accent-40 cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={!replyText.trim()}
+              disabled={!replyText.trim() || isSubmitting}
               className={`flex-[1.5] py-4 px-6 font-unageo text-base font-bold rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 ${
-                replyText.trim()
+                replyText.trim() && !isSubmitting
                   ? "bg-primary-100 text-white hover:brightness-110 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary-100/20 cursor-pointer"
                   : "bg-zinc-100 text-zinc-300 cursor-not-allowed"
               }`}
             >
               <Send className="w-5 h-5" />
-              {review.vendorReply ? "Update Response" : "Send Response"}
+              {isSubmitting
+                ? "Sending…"
+                : review.vendorReply
+                  ? "Update Response"
+                  : "Send Response"}
             </button>
           </div>
         </form>

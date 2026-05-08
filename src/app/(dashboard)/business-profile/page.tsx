@@ -1,10 +1,16 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
+import axios from 'axios';
 import { toast } from 'sonner';
 import { BusinessProfile } from '@/data/business-profile';
 import { useAppSelector } from '@/store/hooks';
 import { useVendorGallery } from '@/services/useVendorGallery';
+import {
+  useSaveVendorOpeningHours,
+  useUpdateAboutBusiness,
+  useUpdateVendorAddress,
+} from '@/services/useVendorProfile';
 
 // Components
 import { ProfileHeader } from '@/components/business-profile/ProfileHeader';
@@ -13,11 +19,54 @@ import { BasicInfoCard } from '@/components/business-profile/BasicInfoCard';
 import { DescriptionCard } from '@/components/business-profile/DescriptionCard';
 import { ProfileGallery } from '@/components/business-profile/ProfileGallery';
 import { LocationCard } from '@/components/business-profile/LocationCard';
-import { ContactCard } from '@/components/business-profile/ContactCard';
 import { HoursCard } from '@/components/business-profile/HoursCard';
 import { EditProfileDrawer } from '@/components/business-profile/EditProfileDrawer';
+import type { VendorKyc, VendorKycLocationBlock } from '@/types/auth';
 
-type DrawerType = 'basic' | 'description' | 'gallery' | 'location' | 'contact' | 'hours' | null;
+type DrawerType = 'description' | 'gallery' | 'location' | 'hours' | null;
+
+function isLocationBlock(
+  loc: VendorKyc['location']
+): loc is VendorKycLocationBlock {
+  return loc != null && typeof loc === 'object' && !Array.isArray(loc);
+}
+
+/** Flatten `kyc.location` (string | object) + top-level KYC fields for UI strings. */
+function addressStringsFromKyc(kyc: VendorKyc | null | undefined): {
+  line1: string;
+  city: string;
+  state: string;
+  zip: string;
+} {
+  if (!kyc) return { line1: '', city: '', state: '', zip: '' };
+
+  if (isLocationBlock(kyc.location)) {
+    const b = kyc.location;
+    const street = String(b.street_address ?? b.streetAddress ?? '').trim();
+    return {
+      line1: street || String(kyc.streetAddress ?? '').trim(),
+      city: String(b.city ?? kyc.city ?? '').trim(),
+      state: String(b.state ?? kyc.state ?? '').trim(),
+      zip: String(b.zip ?? kyc.zip ?? '').trim(),
+    };
+  }
+
+  if (typeof kyc.location === 'string' && kyc.location.trim()) {
+    return {
+      line1: String(kyc.streetAddress ?? kyc.location).trim(),
+      city: String(kyc.city ?? '').trim(),
+      state: String(kyc.state ?? '').trim(),
+      zip: kyc.zip != null ? String(kyc.zip).trim() : '',
+    };
+  }
+
+  return {
+    line1: String(kyc.streetAddress ?? '').trim(),
+    city: String(kyc.city ?? '').trim(),
+    state: String(kyc.state ?? '').trim(),
+    zip: kyc.zip != null ? String(kyc.zip).trim() : '',
+  };
+}
 
 // ─── Map API opening hours array → BusinessProfile opening hours dict ─────────
 
@@ -48,6 +97,8 @@ function mapToBusinessProfile(reduxProfile: ReturnType<typeof useAppSelector<any
 
   const galleryImages: string[] = (gallery ?? []).map((g: any) => g.imageUrl);
 
+  const addr = addressStringsFromKyc(kyc ?? undefined);
+
   return {
     businessName: kyc?.businessName ?? '',
     ownerName: `${vendor?.firstName ?? ''} ${vendor?.lastName ?? ''}`.trim(),
@@ -56,13 +107,12 @@ function mapToBusinessProfile(reduxProfile: ReturnType<typeof useAppSelector<any
     logo: bannerImage,
     bannerImage,
     gallery: galleryImages,
-    address: kyc?.location ?? '',
-    city: '',
-    state: '',
-    zipCode: '',
+    address: addr.line1,
+    city: addr.city,
+    state: addr.state,
+    zipCode: addr.zip,
     phone: vendor?.phoneNumber ?? '',
     email: vendor?.email ?? '',
-    website: kyc?.website ?? '',
     openingHours: mapOpeningHours(openingHours ?? []),
     socialLinks: {},
   };
@@ -73,6 +123,9 @@ function mapToBusinessProfile(reduxProfile: ReturnType<typeof useAppSelector<any
 export default function BusinessProfilePage() {
   const reduxProfile = useAppSelector((state) => state.auth.profile);
   const { uploadAsync, isUploading, deleteAsync, setBannerAsync } = useVendorGallery();
+  const updateAddressMutation = useUpdateVendorAddress();
+  const updateAboutBusinessMutation = useUpdateAboutBusiness();
+  const saveOpeningHoursMutation = useSaveVendorOpeningHours();
 
   const initialData = useMemo(() => mapToBusinessProfile(reduxProfile), [reduxProfile]);
 
@@ -80,6 +133,8 @@ export default function BusinessProfilePage() {
   const [activeDrawer, setActiveDrawer] = useState<DrawerType>(null);
   const [editingData, setEditingData] = useState<any>({});
   const [isSaving, setIsSaving] = useState(false);
+  /** Snapshot when "Edit opening hours" opens — used to POST only changed days. */
+  const openingHoursBaselineRef = useRef<BusinessProfile['openingHours'] | null>(null);
 
   // Use Redux data as source; local state overrides once user has made edits
   const displayProfile = profile ?? initialData;
@@ -90,32 +145,19 @@ export default function BusinessProfilePage() {
   const openDrawer = (type: DrawerType) => {
     if (!displayProfile) return;
     switch (type) {
-      case 'basic':
-        setEditingData({
-          businessName: displayProfile.businessName,
-          ownerName: displayProfile.ownerName,
-          category: displayProfile.category,
-        });
-        break;
       case 'description':
         setEditingData({ description: displayProfile.description });
         break;
       case 'location':
         setEditingData({
-          address: displayProfile.address,
+          streetAddress: displayProfile.address,
           city: displayProfile.city,
           state: displayProfile.state,
-          zipCode: displayProfile.zipCode,
-        });
-        break;
-      case 'contact':
-        setEditingData({
-          phone: displayProfile.phone,
-          email: displayProfile.email,
-          website: displayProfile.website,
+          zip: String(displayProfile.zipCode ?? '').slice(0, 6),
         });
         break;
       case 'hours':
+        openingHoursBaselineRef.current = structuredClone(displayProfile.openingHours);
         setEditingData({ openingHours: { ...displayProfile.openingHours } });
         break;
     }
@@ -125,12 +167,91 @@ export default function BusinessProfilePage() {
   const closeDrawer = () => {
     setActiveDrawer(null);
     setEditingData({});
+    openingHoursBaselineRef.current = null;
   };
 
   const handleSave = () => {
-    setProfile((prev) => ({ ...(prev ?? initialData!), ...editingData }));
-    toast.success('Changes saved successfully!');
-    closeDrawer();
+    if (activeDrawer === 'location') {
+      updateAddressMutation.mutate(
+        {
+          streetAddress: editingData.streetAddress,
+          city: editingData.city,
+          state: editingData.state,
+          zip: editingData.zip,
+        },
+        {
+          onSuccess: () => {
+            setProfile(null);
+            toast.success('Address updated successfully!');
+            closeDrawer();
+          },
+          onError: (err: unknown) => {
+            let msg = 'Could not update address.';
+            if (err instanceof Error) msg = err.message;
+            else if (axios.isAxiosError(err)) {
+              const d = err.response?.data as { message?: string } | undefined;
+              if (d?.message) msg = String(d.message);
+            }
+            toast.error(msg);
+          },
+        }
+      );
+      return;
+    }
+
+    if (activeDrawer === 'hours') {
+      const baseline = openingHoursBaselineRef.current;
+      if (!baseline) {
+        toast.error('Please reopen opening hours and try again.');
+        return;
+      }
+      saveOpeningHoursMutation.mutate(
+        { previous: baseline, next: editingData.openingHours },
+        {
+          onSuccess: (result) => {
+            setProfile(null);
+            if (result.postedCount === 0) {
+              toast.info('No changes to save.');
+            } else {
+              toast.success('Opening hours updated successfully!');
+            }
+            closeDrawer();
+          },
+          onError: (err: unknown) => {
+            let msg = 'Could not update opening hours.';
+            if (err instanceof Error) msg = err.message;
+            else if (axios.isAxiosError(err)) {
+              const d = err.response?.data as { message?: string } | undefined;
+              if (d?.message) msg = String(d.message);
+            }
+            toast.error(msg);
+          },
+        }
+      );
+      return;
+    }
+
+    if (activeDrawer === 'description') {
+      updateAboutBusinessMutation.mutate(
+        { aboutBusiness: String(editingData.description ?? '').trim() },
+        {
+          onSuccess: () => {
+            setProfile(null);
+            toast.success('Description updated successfully!');
+            closeDrawer();
+          },
+          onError: (err: unknown) => {
+            let msg = 'Could not update description.';
+            if (err instanceof Error) msg = err.message;
+            else if (axios.isAxiosError(err)) {
+              const d = err.response?.data as { message?: string } | undefined;
+              if (d?.message) msg = String(d.message);
+            }
+            toast.error(msg);
+          },
+        }
+      );
+    }
   };
 
   const handleSaveAll = () => {
@@ -184,10 +305,7 @@ export default function BusinessProfilePage() {
       <div className="space-y-8">
         <BannerSection bannerImage={displayProfile.bannerImage} />
 
-        <BasicInfoCard
-          profile={displayProfile}
-          onEdit={() => openDrawer('basic')}
-        />
+        <BasicInfoCard profile={displayProfile} />
 
         <DescriptionCard
           description={displayProfile.description}
@@ -197,11 +315,6 @@ export default function BusinessProfilePage() {
         <LocationCard
           profile={displayProfile}
           onEdit={() => openDrawer('location')}
-        />
-
-        <ContactCard
-          profile={displayProfile}
-          onEdit={() => openDrawer('contact')}
         />
 
         <ProfileGallery
@@ -225,6 +338,11 @@ export default function BusinessProfilePage() {
         onSave={handleSave}
         data={editingData}
         setData={setEditingData}
+        isSaving={
+          updateAddressMutation.isPending ||
+          updateAboutBusinessMutation.isPending ||
+          saveOpeningHoursMutation.isPending
+        }
       />
     </div>
   );

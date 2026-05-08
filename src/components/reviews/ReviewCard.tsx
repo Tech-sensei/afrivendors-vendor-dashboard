@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Star, Clock, MessageSquare, Edit3, Trash2 } from "lucide-react";
+import { Star, Clock, MessageSquare, Trash2 } from "lucide-react";
 import { Review } from "@/data/reviews";
 
 interface ReviewCardProps {
@@ -68,26 +68,16 @@ export function ReviewCard({ review, onReply, onDeleteReply }: ReviewCardProps) 
             </div>
           </div>
 
-          <button
-            onClick={() => onReply(review)}
-            className={`flex items-center gap-2.5 px-6 py-3.5 rounded-2xl font-unageo text-sm font-bold transition-all active:scale-95 cursor-pointer shadow-sm ${
-              review.vendorReply
-                ? "bg-zinc-100 text-zinc-500 hover:bg-zinc-200 border border-zinc-200/50"
-                : "bg-primary-100 text-white hover:brightness-110 shadow-lg shadow-primary-100/20"
-            }`}
-          >
-            {review.vendorReply ? (
-              <>
-                <Edit3 className="w-4.5 h-4.5" />
-                Edit Response
-              </>
-            ) : (
-              <>
-                <MessageSquare className="w-4.5 h-4.5" />
-                Send Reply
-              </>
-            )}
-          </button>
+          {!review.vendorReply && (
+            <button
+              type="button"
+              onClick={() => onReply(review)}
+              className="flex items-center gap-2.5 px-6 py-3.5 rounded-2xl font-unageo text-sm font-bold transition-all active:scale-95 cursor-pointer shadow-sm bg-primary-100 text-white hover:brightness-110 shadow-lg shadow-primary-100/20"
+            >
+              <MessageSquare className="w-4.5 h-4.5" />
+              Send Reply
+            </button>
+          )}
         </div>
 
         {/* Review Text */}

@@ -19,7 +19,6 @@ export interface BusinessProfile {
   zipCode: string;
   phone: string;
   email: string;
-  website: string;
   openingHours: {
     [key: string]: OpeningHours;
   };
@@ -50,7 +49,6 @@ export const initialProfile: BusinessProfile = {
   zipCode: '100001',
   phone: '+234 801 234 5678',
   email: 'hello@zuriglow.com',
-  website: 'www.zuriglow.com',
   openingHours: {
     monday: { isOpen: true, open: '09:00', close: '18:00' },
     tuesday: { isOpen: true, open: '09:00', close: '18:00' },
