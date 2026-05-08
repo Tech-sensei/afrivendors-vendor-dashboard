@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { VendorAppointment } from "@/types/appointments";
 import { useMobile } from "@/hooks/useMobile";
 import { cn } from "@/lib/utils";
-import { MessagePlaceHolder } from "./messagePlaceHolder";
+import { MessagePlaceHolder } from "./MessagePlaceHolder";
 import {
   useCreateStreamChatChannel,
   useStreamChatToken,
