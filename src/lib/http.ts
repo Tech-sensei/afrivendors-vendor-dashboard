@@ -4,6 +4,7 @@ import { store } from "@/store/store";
 import { clearAuth, mergeVendorKycFromRefresh } from "@/store/authSlice";
 import { performTokenRefresh } from "@/lib/authRefresh";
 
+// interceptor
 const http = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
   headers: {
