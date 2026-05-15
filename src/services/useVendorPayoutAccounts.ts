@@ -63,14 +63,18 @@ function mapStripeRowToPayoutAccount(row: VendorStripeExternalAccountApi): Payou
   };
 }
 
-export function mapVendorAccountsToPayoutAccounts(
-  rows: VendorStripeExternalAccountApi[]
-): PayoutAccount[] {
+export function mapVendorAccountsToPayoutAccounts(rows: VendorStripeExternalAccountApi[]): PayoutAccount[] {
   const mapped = rows.map(mapStripeRowToPayoutAccount);
   return mapped.sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
 }
 
-export function useVendorPayoutAccounts() {
+type UseVendorPayoutAccountsOptions = {
+  /** When false, does not call `GET /vendor/accounts` on this page; still reads cached data if another view already fetched. */
+  enabled?: boolean;
+};
+
+export function useVendorPayoutAccounts(options?: UseVendorPayoutAccountsOptions) {
+  const enabled = options?.enabled ?? true;
   return useQuery({
     queryKey: VENDOR_PAYOUT_ACCOUNTS_QUERY_KEY,
     queryFn: async () => {
@@ -79,6 +83,7 @@ export function useVendorPayoutAccounts() {
       return mapVendorAccountsToPayoutAccounts(rows);
     },
     staleTime: 60_000,
+    enabled,
   });
 }
 

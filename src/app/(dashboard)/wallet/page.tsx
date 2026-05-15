@@ -10,6 +10,7 @@ import {
   useTransactionsInfinite,
   useTransactionDetail,
   useWallet,
+  useWalletPayout,
 } from "@/services/useTransactions";
 import {
   useStripeConnectAccountLink,
@@ -20,7 +21,6 @@ import { WalletHeader } from "@/components/wallet/WalletHeader";
 import { BalanceCards } from "@/components/wallet/BalanceCards";
 import { TransactionHistory } from "@/components/wallet/TransactionHistory";
 
-import { PayoutAccountsDrawer } from "@/components/wallet/drawers/PayoutAccountsDrawer";
 import { TransactionDetailsDrawer } from "@/components/wallet/drawers/TransactionDetailsDrawer";
 import { WithdrawFundsDrawer } from "@/components/wallet/drawers/WithdrawFundsDrawer";
 
@@ -30,12 +30,13 @@ function isApiNumericTransactionId(id: string): boolean {
 
 export default function WalletPage() {
   const { data: walletData, isLoading: isWalletLoading } = useWallet();
-  const {
-    data: payoutAccounts = [],
-    isLoading: isPayoutAccountsLoading,
-  } = useVendorPayoutAccounts();
+  const { data: payoutAccounts = [] } = useVendorPayoutAccounts({
+    enabled: false,
+  });
 
   const stripeConnectMutation = useStripeConnectAccountLink();
+
+  const payoutMutation = useWalletPayout();
 
   const {
     data,
@@ -52,12 +53,9 @@ export default function WalletPage() {
     [data]
   );
 
-  const [pendingWithdrawals, setPendingWithdrawals] = useState<Transaction[]>(
-    []
-  );
   const transactions = useMemo(
-    () => [...pendingWithdrawals, ...apiTransactions],
-    [pendingWithdrawals, apiTransactions]
+    () => apiTransactions,
+    [apiTransactions]
   );
 
   const walletCurrency =
@@ -69,7 +67,6 @@ export default function WalletPage() {
   const [isTransactionDetailsOpen, setIsTransactionDetailsOpen] =
     useState(false);
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
-  const [isPayoutAccountsOpen, setIsPayoutAccountsOpen] = useState(false);
 
   const [dateFilter, setDateFilter] = useState<
     "all" | "today" | "yesterday" | "week" | "month" | "custom"
@@ -158,41 +155,38 @@ export default function WalletPage() {
     }
   };
 
-  const handleWithdraw = (amount: string, accountId: string) => {
-    const account = payoutAccounts.find((a) => a.id === accountId);
-    const newTransaction: Transaction = {
-      id: `local-${Date.now()}`,
-      type: "withdrawal",
-      title: "Withdrawal Initialized",
-      description: `Funds transferred to ${account?.name} (${account?.details})`,
-      amount,
-      date: new Date().toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      }),
-      time: new Date().toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      }),
-      status: "pending",
-      createdAt: new Date().toISOString(),
-      currency: walletCurrency,
-      amountDisplay: formatMoney(parseFloat(amount) || 0, walletCurrency),
-    };
-    setPendingWithdrawals((prev) => [newTransaction, ...prev]);
-    setIsWithdrawOpen(false);
-    toast.success(
-      `Withdrawal of ${formatMoney(parseFloat(amount) || 0, walletCurrency)} initiated!`
-    );
+  const handleWithdraw = (_amount: string, _accountId: string) => {
+    const parsed = parseFloat(_amount);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      toast.error("Invalid amount");
+      return;
+    }
+    payoutMutation.mutate(parsed, {
+      onSuccess: () => {
+        setIsWithdrawOpen(false);
+        toast.success(
+          `Withdrawal of ${formatMoney(parsed, walletCurrency)} submitted.`
+        );
+      },
+      onError: (err: unknown) => {
+        let msg = "Withdrawal could not be completed. Please try again.";
+        if (axios.isAxiosError(err)) {
+          const d = err.response?.data as
+            | { message?: string | string[]; responseMessage?: string }
+            | undefined;
+          const m = d?.message ?? d?.responseMessage;
+          if (m) msg = Array.isArray(m) ? m.join(", ") : String(m);
+          else if (err.message) msg = err.message;
+        } else if (err instanceof Error) msg = err.message;
+        toast.error(msg);
+      },
+    });
   };
 
   const handleStripeConnectPayout = () => {
     stripeConnectMutation.mutate(undefined, {
       onSuccess: (url) => {
         setIsWithdrawOpen(false);
-        setIsPayoutAccountsOpen(false);
         window.location.href = url;
       },
       onError: (err: unknown) => {
@@ -228,7 +222,6 @@ export default function WalletPage() {
         currencyCode={walletData?.currency ?? walletCurrency}
         isLoading={isWalletLoading}
         onWithdraw={() => setIsWithdrawOpen(true)}
-        onViewPayouts={() => setIsPayoutAccountsOpen(true)}
       />
 
       <TransactionHistory
@@ -277,17 +270,9 @@ export default function WalletPage() {
         currencyCode={walletCurrency}
         payoutAccounts={payoutAccounts}
         onConfirm={handleWithdraw}
+        isSubmitting={payoutMutation.isPending}
         isConnectingPayout={stripeConnectMutation.isPending}
         onAddPayoutAccount={handleStripeConnectPayout}
-      />
-
-      <PayoutAccountsDrawer
-        isOpen={isPayoutAccountsOpen}
-        onClose={() => setIsPayoutAccountsOpen(false)}
-        accounts={payoutAccounts}
-        isLoading={isPayoutAccountsLoading}
-        isConnecting={stripeConnectMutation.isPending}
-        onAddAccount={handleStripeConnectPayout}
       />
     </div>
   );

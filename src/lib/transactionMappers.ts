@@ -15,9 +15,22 @@ function mapApiType(type: string): Transaction["type"] {
   const t = type.toLowerCase();
   if (t === "appointment_payment" || t === "payment") return "payment";
   if (t === "withdrawal") return "withdrawal";
-  if (t === "commission" || t === "platform_fee") return "commission";
+  if (
+    t === "commission" ||
+    t === "commission_earned" ||
+    t === "platform_fee"
+  )
+    return "commission";
   if (t === "reversal" || t === "refund" || t === "chargeback") return "reversal";
   return "payment";
+}
+
+function resolveNetToVendor(raw: TransactionApiItem): number {
+  const n = raw.netToVendorAmount;
+  if (n != null && Number.isFinite(n)) return n;
+  const gross = raw.amount ?? 0;
+  const comm = raw.commissionAmount ?? 0;
+  return gross - comm;
 }
 
 export function mapTransactionApiToUi(raw: TransactionApiItem): Transaction {
@@ -43,8 +56,8 @@ export function mapTransactionApiToUi(raw: TransactionApiItem): Transaction {
       : undefined);
 
   const gross = raw.amount;
-  const commission = raw.commissionAmount;
-  const net = raw.netToVendorAmount;
+  const commission = raw.commissionAmount ?? 0;
+  const net = resolveNetToVendor(raw);
 
   const amountNumericStr = net.toFixed(2);
   const amountDisplay =

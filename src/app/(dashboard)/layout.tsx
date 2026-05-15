@@ -25,6 +25,10 @@ const pageMetadata: Record<string, { title: string; description: string }> = {
     title: 'Wallet',
     description: 'View your earnings, transactions, and payment history',
   },
+  '/payouts': {
+    title: 'Payouts Management',
+    description: 'Manage vendor payout requests and disbursements',
+  },
   '/messages': {
     title: 'Messages',
     description: 'Communicate with your customers and clients',

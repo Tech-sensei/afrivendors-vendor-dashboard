@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { Wallet, ArrowUpRight, CreditCard, TrendingUp, Eye, EyeOff } from "lucide-react";
 import { formatMoney } from "@/lib/currency";
 
@@ -10,7 +11,6 @@ interface BalanceCardsProps {
   currencyCode?: string;
   isLoading?: boolean;
   onWithdraw: () => void;
-  onViewPayouts: () => void;
 }
 
 export function BalanceCards({
@@ -19,7 +19,6 @@ export function BalanceCards({
   currencyCode = "GBP",
   isLoading = false,
   onWithdraw,
-  onViewPayouts,
 }: BalanceCardsProps) {
   const [showBalance, setShowBalance] = useState(true);
 
@@ -64,13 +63,13 @@ export function BalanceCards({
             <ArrowUpRight className="w-4 h-4" />
             Withdraw
           </button>
-          <button
-            onClick={onViewPayouts}
-            className="flex items-center gap-2 py-3 px-4 rounded-xl bg-white/20 border border-white/30 text-white text-sm font-semibold transition-all hover:bg-white/25 active:scale-95 cursor-pointer"
+          <Link
+            href="/payouts"
+            className="flex items-center gap-2 py-3 px-4 rounded-xl bg-white/20 border border-white/30 text-white text-sm font-semibold transition-all hover:bg-white/25 active:scale-95 cursor-pointer shrink-0"
           >
             <CreditCard className="w-4 h-4" />
             Payouts
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -83,12 +82,15 @@ export function BalanceCards({
           </span>
         </div>
         {isLoading ? (
-          <div className="h-10 w-36 bg-zinc-100 rounded-xl animate-pulse mb-5" />
+          <div className="h-10 w-36 bg-zinc-100 rounded-xl animate-pulse mb-3" />
         ) : (
-          <h2 className="font-unbounded text-4xl font-bold text-secondary-000 mb-5">
+          <h2 className="font-unbounded text-4xl font-bold text-secondary-000 mb-3">
             {formatBalance(lifetimeEarnings)}
           </h2>
         )}
+        <p className="font-unageo text-sm text-zinc-500 leading-relaxed">
+          Held until the client releases it, then it becomes available to withdraw.
+        </p>
       </div>
     </div>
   );

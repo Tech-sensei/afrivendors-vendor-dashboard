@@ -1,4 +1,9 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import http from "@/lib/http";
 import type { TransactionApiItem } from "@/types/transactions";
 import type { Transaction } from "@/data/wallet";
@@ -21,6 +26,21 @@ export function useWallet() {
     queryFn: async () => {
       const { data } = await http.get("/wallet/me");
       return (data as { data?: WalletInfo })?.data ?? (data as WalletInfo);
+    },
+  });
+}
+
+/** POST `/wallet/payout` — `amount` in major currency units (e.g. 10.2 for £10.20). */
+export function useWalletPayout() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (amount: number) => {
+      const { data } = await http.post<unknown>("/wallet/payout", { amount });
+      return data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: WALLET_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: VENDOR_TRANSACTIONS_QUERY_KEY });
     },
   });
 }

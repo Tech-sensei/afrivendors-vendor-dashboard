@@ -1,20 +1,24 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import axios from "axios";
 import { toast } from "sonner";
 import { useAuthAPI } from "@/services/useAuthAPI";
 import { useAppSelector } from "@/store/hooks";
-import { SettingsHeader } from "@/components/settings/SettingsHeader";
+import type { PayoutAccount } from "@/data/wallet";
+import {
+  useStripeConnectAccountLink,
+  useVendorPayoutAccounts,
+} from "@/services/useVendorPayoutAccounts";
 import { AccountSettings } from "@/components/settings/AccountSettings";
 import { SecuritySettings } from "@/components/settings/SecuritySettings";
 import { PayoutSettings } from "@/components/settings/PayoutSettings";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
 import { DangerZone } from "@/components/settings/DangerZone";
 import { ChangePasswordDrawer } from "@/components/settings/drawers/ChangePasswordDrawer";
-import { AddPayoutMethodDrawer } from "@/components/settings/drawers/AddPayoutMethodDrawer";
 import { DeleteAccountDrawer } from "@/components/settings/drawers/DeleteAccountDrawer";
 
-type DrawerType = "password" | "payout" | "delete-account" | null;
+type DrawerType = "password" | "delete-account" | null;
 
 interface PayoutMethod {
   id: string;
@@ -24,10 +28,21 @@ interface PayoutMethod {
   isPrimary: boolean;
 }
 
+function mapPayoutAccountToMethod(p: PayoutAccount): PayoutMethod {
+  return {
+    id: p.id,
+    type: p.type === "mobile_money" ? "mobile-money" : "bank",
+    name: p.name,
+    details: p.details,
+    isPrimary: p.isDefault,
+  };
+}
+
 export default function VendorSettings() {
   const { changePasswordAsync, isChangingPassword } = useAuthAPI();
   const { profile } = useAppSelector((state) => state.auth);
   const [activeDrawer, setActiveDrawer] = useState<DrawerType>(null);
+  const stripeConnectMutation = useStripeConnectAccountLink();
 
   const accountData = useMemo(() => ({
     name: `${profile?.vendor?.firstName ?? ''} ${profile?.vendor?.lastName ?? ''}`.trim() || '—',
@@ -38,23 +53,15 @@ export default function VendorSettings() {
   // Security Settings
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
 
-  // Payout Methods
-  const [payoutMethods, setPayoutMethods] = useState<PayoutMethod[]>([
-    {
-      id: "1",
-      type: "bank",
-      name: "GTBank Nigeria",
-      details: "•••• •••• •••• 4532",
-      isPrimary: true,
-    },
-    {
-      id: "2",
-      type: "mobile-money",
-      name: "MTN Mobile Money",
-      details: "+234 803 456 7890",
-      isPrimary: false,
-    },
-  ]);
+  const {
+    data: payoutAccounts = [],
+    isLoading: isPayoutAccountsLoading,
+  } = useVendorPayoutAccounts();
+
+  const payoutMethods = useMemo(
+    () => payoutAccounts.map(mapPayoutAccountToMethod),
+    [payoutAccounts]
+  );
 
   // Notification Preferences
   const [notifications, setNotifications] = useState({
@@ -84,49 +91,36 @@ export default function VendorSettings() {
     }
   };
 
-  const handleAddPayoutMethod = (newMethodData: any) => {
-    if (newMethodData.type === "bank") {
-      if (!newMethodData.bankName || !newMethodData.accountNumber || !newMethodData.accountName) {
-        toast.error("Please fill in all bank details");
-        return;
-      }
-    } else {
-      if (!newMethodData.phoneNumber) {
-        toast.error("Please enter a phone number");
-        return;
-      }
-    }
-
-    const newMethod: PayoutMethod = {
-      id: Date.now().toString(),
-      type: newMethodData.type,
-      name: newMethodData.type === "bank" ? newMethodData.bankName : "MTN Mobile Money",
-      details: newMethodData.type === "bank" 
-        ? `•••• •••• •••• ${newMethodData.accountNumber.slice(-4)}`
-        : newMethodData.phoneNumber,
-      isPrimary: false,
-    };
-
-    setPayoutMethods([...payoutMethods, newMethod]);
-    toast.success("Payout method added successfully!");
-    closeDrawer();
+  const handleAddPayoutViaStripe = () => {
+    stripeConnectMutation.mutate(undefined, {
+      onSuccess: (url) => {
+        window.location.href = url;
+      },
+      onError: (err: unknown) => {
+        let msg = "Could not open Stripe. Please try again.";
+        if (axios.isAxiosError(err)) {
+          const d = err.response?.data as
+            | { message?: string; responseMessage?: string }
+            | undefined;
+          const m = d?.message ?? d?.responseMessage;
+          if (m) msg = Array.isArray(m) ? m.join(", ") : String(m);
+          else if (err.message) msg = err.message;
+        } else if (err instanceof Error) msg = err.message;
+        toast.error(msg);
+      },
+    });
   };
 
-  const handleDeletePayoutMethod = (id: string) => {
-    const method = payoutMethods.find((m) => m.id === id);
-    if (method?.isPrimary) {
-      toast.error("Cannot delete primary payout method");
-      return;
-    }
-    setPayoutMethods(payoutMethods.filter((m) => m.id !== id));
-    toast.success("Payout method removed");
-  };
-
-  const handleSetPrimaryPayout = (id: string) => {
-    setPayoutMethods(
-      payoutMethods.map((m) => ({ ...m, isPrimary: m.id === id }))
+  const handleDeletePayoutMethod = (_id: string) => {
+    toast.info(
+      "Connected payout accounts are managed in Stripe Connect. Remove or change them from your Stripe dashboard."
     );
-    toast.success("Primary payout method updated");
+  };
+
+  const handleSetPrimaryPayout = (_id: string) => {
+    toast.info(
+      "The default payout account is set in Stripe Connect for your currency."
+    );
   };
 
   const handleNotificationToggle = (key: string) => {
@@ -159,7 +153,9 @@ export default function VendorSettings() {
 
         <PayoutSettings
           methods={payoutMethods}
-          onAddMethod={() => setActiveDrawer("payout")}
+          isLoading={isPayoutAccountsLoading}
+          isStripeConnectPending={stripeConnectMutation.isPending}
+          onAddMethod={handleAddPayoutViaStripe}
           onDeleteMethod={handleDeletePayoutMethod}
           onSetPrimary={handleSetPrimaryPayout}
         />
@@ -178,12 +174,6 @@ export default function VendorSettings() {
         onClose={closeDrawer}
         onSubmit={handlePasswordSubmit}
         isSubmitting={isChangingPassword}
-      />
-
-      <AddPayoutMethodDrawer
-        isOpen={activeDrawer === "payout"}
-        onClose={closeDrawer}
-        onSubmit={handleAddPayoutMethod}
       />
 
       <DeleteAccountDrawer

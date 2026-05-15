@@ -44,7 +44,8 @@ export type TransactionApiItem = {
   id: number;
   amount: number;
   commissionAmount: number;
-  netToVendorAmount: number;
+  /** API may omit this; map layer falls back to amount − commission. */
+  netToVendorAmount: number | null;
   currency: string;
   status: string;
   type: string;

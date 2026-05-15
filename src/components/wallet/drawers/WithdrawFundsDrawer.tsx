@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { X, ArrowRight, Building2, Smartphone, Plus, AlertCircle, Loader2 } from "lucide-react";
+import { X, Building2, Smartphone, Plus, AlertCircle, Loader2 } from "lucide-react";
 import { PayoutAccount } from "@/data/wallet";
 import { getCurrencySymbol } from "@/lib/currency";
 
@@ -16,6 +16,8 @@ interface WithdrawFundsDrawerProps {
   onAddPayoutAccount: () => void;
   /** True while Stripe Connect account link is loading */
   isConnectingPayout?: boolean;
+  /** True while POST /wallet/payout is in flight */
+  isSubmitting?: boolean;
 }
 
 export function WithdrawFundsDrawer({
@@ -27,6 +29,7 @@ export function WithdrawFundsDrawer({
   onConfirm,
   onAddPayoutAccount,
   isConnectingPayout = false,
+  isSubmitting = false,
 }: WithdrawFundsDrawerProps) {
   const currencySymbol = getCurrencySymbol(currencyCode);
   const [amount, setAmount] = useState("");
@@ -43,15 +46,34 @@ export function WithdrawFundsDrawer({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (amount && selectedAccountId) {
+    const parsed = parseFloat(amount);
+    const withinBalance =
+      Number.isFinite(parsed) &&
+      parsed > 0 &&
+      parsed <= parseFloat(availableBalance);
+    const accountRequired = payoutAccounts.length > 0;
+    const accountOk = !accountRequired || Boolean(selectedAccountId);
+    if (withinBalance && accountOk && !isSubmitting) {
       onConfirm(amount, selectedAccountId);
-      setAmount("");
     }
   };
 
   const handleMaxClick = () => {
     setAmount(availableBalance);
   };
+
+  const parsedAmount = parseFloat(amount);
+  const withinBalance =
+    Number.isFinite(parsedAmount) &&
+    parsedAmount > 0 &&
+    parsedAmount <= parseFloat(availableBalance);
+  const accountRequired = payoutAccounts.length > 0;
+  const accountOk = !accountRequired || Boolean(selectedAccountId);
+  const canWithdraw = withinBalance && accountOk && !isSubmitting;
+
+  useEffect(() => {
+    if (!isOpen) setAmount("");
+  }, [isOpen]);
 
   return (
     <div
@@ -100,7 +122,7 @@ export function WithdrawFundsDrawer({
               </label>
               <div className="relative">
                 <span className="absolute left-5 top-1/2 -translate-y-1/2 font-unageo text-2xl font-bold text-zinc-400">
-                  $
+                  {currencySymbol}
                 </span>
                 <input
                   type="number"
@@ -241,10 +263,17 @@ export function WithdrawFundsDrawer({
             </button>
             <button
               type="submit"
-              disabled={!amount || !selectedAccountId || parseFloat(amount) <= 0 || parseFloat(amount) > parseFloat(availableBalance)}
-              className={`flex-[1.5] py-4 px-6 font-unageo text-[15px] font-bold rounded-xl flex items-center justify-center gap-2 transition-all duration-300 shadow-sm ${(!amount || !selectedAccountId || parseFloat(amount) <= 0 || parseFloat(amount) > parseFloat(availableBalance)) ? 'bg-accent-20 text-accent-60 border border-accent-20 cursor-not-allowed' : 'bg-primary-100 text-white hover:bg-primary-100/90 hover:shadow-lg hover:shadow-primary-100/20 cursor-pointer'} active:scale-95`}
+              disabled={!canWithdraw}
+              className={`flex-[1.5] py-4 px-6 font-unageo text-[15px] font-bold rounded-xl flex items-center justify-center gap-2 transition-all duration-300 shadow-sm ${!canWithdraw ? "bg-accent-20 text-accent-60 border border-accent-20 cursor-not-allowed" : "bg-primary-100 text-white hover:bg-primary-100/90 hover:shadow-lg hover:shadow-primary-100/20 cursor-pointer"} active:scale-95`}
             >
-              Confirm Withdrawal
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-5 w-5 shrink-0 animate-spin" aria-hidden />
+                  Processing…
+                </>
+              ) : (
+                "Confirm Withdrawal"
+              )}
             </button>
           </div>
         </form>

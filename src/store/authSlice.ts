@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit";
-import http from "@/lib/http";
+import http, { redirectToSignIn } from "@/lib/http";
 import type { AuthState, VendorLoginKycSnapshot, VendorProfile } from "@/types/auth";
 
 const initialState: AuthState = {
@@ -18,8 +18,13 @@ export const fetchUserProfile = createAsyncThunk(
       // API returns { vendor, kyc, openingHours, gallery }
       return (data?.data ?? data) as VendorProfile;
     } catch (error: any) {
-      if (error.response?.status === 401) {
+      const status = error.response?.status;
+      if (status === 401) {
         return rejectWithValue({ is401: true });
+      }
+      if (status === 403) {
+        redirectToSignIn();
+        return rejectWithValue({ isForbiddenPortal: true });
       }
       return rejectWithValue(error.response?.data?.message || "Failed to fetch profile");
     }
@@ -78,7 +83,7 @@ const authSlice = createSlice({
       })
       .addCase(fetchUserProfile.rejected, (state, action) => {
         state.isLoadingUser = false;
-        if ((action.payload as any)?.is401) {
+        if ((action.payload as any)?.is401 || (action.payload as any)?.isForbiddenPortal) {
           state.profile = null;
           state.isAuthenticated = false;
         }

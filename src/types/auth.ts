@@ -93,6 +93,8 @@ export interface AuthPhoneNumber {
 export interface SignInPayload {
   email: string;
   password: string;
+  /** Injected by `useAuthAPI` — do not omit when calling mutate. */
+  portal?: string;
 }
 
 /** Shape of `POST /auth/login` success body (vendor). */
