@@ -93,6 +93,4 @@ export const vendorOpeningHourPayloadSchema = z
 
 export type VendorOpeningHourPayload = z.infer<typeof vendorOpeningHourPayloadSchema>;
 
-export function firstZodIssueMessage(error: z.ZodError): string {
-  return error.issues[0]?.message ?? "Validation failed";
-}
+export { firstZodIssueMessage } from "@/lib/validations/zodHelpers";

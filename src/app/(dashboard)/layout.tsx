@@ -26,8 +26,8 @@ const pageMetadata: Record<string, { title: string; description: string }> = {
     description: 'View your earnings, transactions, and payment history',
   },
   '/payouts': {
-    title: 'Payouts Management',
-    description: 'Manage vendor payout requests and disbursements',
+    title: 'Payout history',
+    description: 'Track your withdrawal requests and their status',
   },
   '/messages': {
     title: 'Messages',

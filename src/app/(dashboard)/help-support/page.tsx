@@ -12,6 +12,12 @@ import {
   sampleChatMessages
 } from '@/data/help-support';
 import { useCreateSupportTicket, useSendSupportTicketMessage, useSupportTickets, useTicketMessages } from '@/services/useHelpSupport';
+import {
+  createSupportTicketSchema,
+  liveChatMessageSchema,
+  supportTicketReplySchema,
+} from '@/lib/validations/supportTicketSchemas';
+import { firstZodIssueMessage } from '@/lib/validations/zodHelpers';
 import { QuickActions } from '@/components/help-support/QuickActions';
 import { FAQSection } from '@/components/help-support/FAQSection';
 import { TicketsList } from '@/components/help-support/TicketsList';
@@ -83,9 +89,15 @@ export default function HelpSupportPage() {
   }, [selectedTicket?.id, selectedTicketMessages]);
 
   const handleSendTicketReply = () => {
-    if (!ticketReply.trim() || !selectedTicket) return;
+    if (!selectedTicket) return;
 
-    const trimmed = ticketReply.trim();
+    const parsed = supportTicketReplySchema.safeParse({ message: ticketReply });
+    if (!parsed.success) {
+      toast.error(firstZodIssueMessage(parsed.error));
+      return;
+    }
+
+    const trimmed = parsed.data.message;
     const optimisticMessage = {
       id: `tmp-${Date.now()}`,
       sender: 'user' as const,
@@ -151,17 +163,23 @@ export default function HelpSupportPage() {
   };
 
   const handleSubmitTicket = () => {
-    if (!newTicket.subject.trim() || !newTicket.message.trim()) {
-      toast.error('Please fill in all required fields');
+    const parsed = createSupportTicketSchema.safeParse({
+      subject: newTicket.subject,
+      message: newTicket.message,
+      priority: newTicket.priority,
+      category: newTicket.category,
+    });
+    if (!parsed.success) {
+      toast.error(firstZodIssueMessage(parsed.error));
       return;
     }
 
     createTicket.mutate(
       {
-        subject: newTicket.subject,
-        message: newTicket.message,
-        priority: newTicket.priority,
-        category: newTicket.category,
+        subject: parsed.data.subject,
+        message: parsed.data.message,
+        priority: parsed.data.priority,
+        category: parsed.data.category,
         attachments: newTicket.attachments,
       },
       {
@@ -189,12 +207,16 @@ export default function HelpSupportPage() {
   };
 
   const handleSendMessage = () => {
-    if (!chatInput.trim()) return;
+    const parsed = liveChatMessageSchema.safeParse({ message: chatInput });
+    if (!parsed.success) {
+      toast.error(firstZodIssueMessage(parsed.error));
+      return;
+    }
 
     const newMessage: ChatMessage = {
       id: String(chatMessages.length + 1),
       sender: 'user',
-      message: chatInput,
+      message: parsed.data.message,
       timestamp: new Date().toISOString(),
       senderName: 'You'
     };

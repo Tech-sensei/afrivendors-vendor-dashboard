@@ -11,10 +11,19 @@ function mapApiStatus(status: string): Transaction["status"] {
   return "pending";
 }
 
+export function formatTransactionTypeLabel(type: string): string {
+  return type
+    .split("_")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
 function mapApiType(type: string): Transaction["type"] {
   const t = type.toLowerCase();
   if (t === "appointment_payment" || t === "payment") return "payment";
-  if (t === "withdrawal") return "withdrawal";
+  if (t === "withdrawal" || t === "vendor_payout" || t === "payout")
+    return "withdrawal";
   if (
     t === "commission" ||
     t === "commission_earned" ||
@@ -47,8 +56,6 @@ export function mapTransactionApiToUi(raw: TransactionApiItem): Transaction {
   });
 
   const uiType = mapApiType(raw.type);
-  const serviceName =
-    raw.appointment?.services?.[0]?.serviceName ?? raw.description;
   const customerName =
     raw.appointment?.customerName ??
     (raw.user
@@ -73,16 +80,12 @@ export function mapTransactionApiToUi(raw: TransactionApiItem): Transaction {
       ? { gross, commission, net }
       : undefined;
 
-  const description =
-    customerName && !raw.description.includes(customerName)
-      ? `${raw.description} · ${customerName}`
-      : raw.description;
-
   return {
     id: String(raw.id),
     type: uiType,
-    title: serviceName || raw.description || "Transaction",
-    description,
+    apiType: raw.type,
+    title: formatTransactionTypeLabel(raw.type) || "Transaction",
+    description: raw.description || "",
     amount: amountNumericStr,
     amountDisplay,
     date: dateStr,

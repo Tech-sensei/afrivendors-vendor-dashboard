@@ -8,6 +8,10 @@ import http from "@/lib/http";
 import type { TransactionApiItem } from "@/types/transactions";
 import type { Transaction } from "@/data/wallet";
 import { mapTransactionApiToUi } from "@/lib/transactionMappers";
+import {
+  VENDOR_PAYOUTS_BREAKDOWN_QUERY_KEY,
+  VENDOR_PAYOUTS_LIST_QUERY_KEY,
+} from "@/services/useVendorPayouts";
 
 export interface WalletInfo {
   id: number;
@@ -41,6 +45,8 @@ export function useWalletPayout() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: WALLET_QUERY_KEY });
       void queryClient.invalidateQueries({ queryKey: VENDOR_TRANSACTIONS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: [...VENDOR_PAYOUTS_LIST_QUERY_KEY] });
+      void queryClient.invalidateQueries({ queryKey: [...VENDOR_PAYOUTS_BREAKDOWN_QUERY_KEY] });
     },
   });
 }

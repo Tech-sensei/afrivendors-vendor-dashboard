@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { X, Send, MessageSquare, Clock, Star, Info } from "lucide-react";
 import { Review } from "@/data/reviews";
+import { vendorReplyToReviewPayloadSchema } from "@/lib/validations/reviewReplySchemas";
+import { toast } from "sonner";
 
 interface ReplyDrawerProps {
   isOpen: boolean;
@@ -31,8 +33,19 @@ export function ReplyDrawer({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (replyText.trim() && !isSubmitting) {
-      onSave(replyText);
+    const reviewId =
+      review.reviewId ??
+      (Number.isFinite(Number(review.id)) ? Number(review.id) : NaN);
+    const parsed = vendorReplyToReviewPayloadSchema.safeParse({
+      reply: replyText,
+      reviewId,
+    });
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0]?.message ?? "Invalid reply");
+      return;
+    }
+    if (!isSubmitting) {
+      onSave(parsed.data.reply);
     }
   };
 

@@ -3,6 +3,9 @@
 import React, { useState } from 'react';
 import { X, Clock, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { reminderFormSchema } from '@/lib/validations/messageSchemas';
+import { firstZodIssueMessage } from '@/lib/validations/zodHelpers';
+import { toast } from 'sonner';
 
 interface SetReminderDrawerProps {
   isOpen: boolean;
@@ -17,13 +20,15 @@ export function SetReminderDrawer({ isOpen, onClose, messageContent, onSave }: S
   const [note, setNote] = useState('');
 
   const handleSave = () => {
-    if (date && time) {
-      onSave(date, time, note);
-      // Reset
-      setDate('');
-      setTime('');
-      setNote('');
+    const parsed = reminderFormSchema.safeParse({ date, time, note });
+    if (!parsed.success) {
+      toast.error(firstZodIssueMessage(parsed.error));
+      return;
     }
+    onSave(parsed.data.date, parsed.data.time, parsed.data.note ?? '');
+    setDate('');
+    setTime('');
+    setNote('');
   };
 
   return (

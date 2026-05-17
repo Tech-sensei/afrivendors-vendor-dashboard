@@ -4,6 +4,9 @@ import React, { useEffect, useState } from "react";
 import { X, Building2, Smartphone, Plus, AlertCircle, Loader2 } from "lucide-react";
 import { PayoutAccount } from "@/data/wallet";
 import { getCurrencySymbol } from "@/lib/currency";
+import { createWithdrawFundsSchema } from "@/lib/validations/walletSchemas";
+import { firstZodIssueMessage } from "@/lib/validations/zodHelpers";
+import { toast } from "sonner";
 
 interface WithdrawFundsDrawerProps {
   isOpen: boolean;
@@ -46,15 +49,17 @@ export function WithdrawFundsDrawer({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const parsed = parseFloat(amount);
-    const withinBalance =
-      Number.isFinite(parsed) &&
-      parsed > 0 &&
-      parsed <= parseFloat(availableBalance);
-    const accountRequired = payoutAccounts.length > 0;
-    const accountOk = !accountRequired || Boolean(selectedAccountId);
-    if (withinBalance && accountOk && !isSubmitting) {
-      onConfirm(amount, selectedAccountId);
+    const balance = parseFloat(availableBalance) || 0;
+    const result = createWithdrawFundsSchema(balance, payoutAccounts.length > 0).safeParse({
+      amount,
+      payoutAccountId: selectedAccountId || undefined,
+    });
+    if (!result.success) {
+      toast.error(firstZodIssueMessage(result.error));
+      return;
+    }
+    if (!isSubmitting) {
+      onConfirm(result.data.amount, result.data.payoutAccountId ?? "");
     }
   };
 

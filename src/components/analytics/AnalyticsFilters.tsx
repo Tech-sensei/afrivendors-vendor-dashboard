@@ -1,6 +1,9 @@
 "use client";
 
+import { useEffect, useState } from 'react';
 import type { TimeFilter } from '@/data/analytics';
+import { customDateRangeSchema } from '@/lib/validations/analyticsSchemas';
+import { zodFieldErrors } from '@/lib/validations/zodHelpers';
 
 interface AnalyticsFiltersProps {
   timeFilter: TimeFilter;
@@ -21,6 +24,21 @@ export function AnalyticsFilters({
   setCustomDateRange,
   categories,
 }: AnalyticsFiltersProps) {
+  const [dateErrors, setDateErrors] = useState<{ start?: string; end?: string }>({});
+
+  useEffect(() => {
+    if (timeFilter !== 'custom') {
+      setDateErrors({});
+      return;
+    }
+    const result = customDateRangeSchema.safeParse(customDateRange);
+    if (!result.success) {
+      setDateErrors(zodFieldErrors(result.error));
+    } else {
+      setDateErrors({});
+    }
+  }, [timeFilter, customDateRange]);
+
   const timePeriods: { id: TimeFilter; label: string }[] = [
     { id: '7days', label: '7 Days' },
     { id: '30days', label: '30 Days' },
@@ -64,7 +82,9 @@ export function AnalyticsFilters({
               onChange={(e) =>
                 setCustomDateRange({ ...customDateRange, start: e.target.value })
               }
-              className="flex-1 py-2 px-3 rounded-lg border border-accent-20 font-unageo text-[13px] text-secondary-000 bg-white outline-none focus:border-primary-100 transition-colors"
+              className={`flex-1 py-2 px-3 rounded-lg border font-unageo text-[13px] text-secondary-000 bg-white outline-none focus:border-primary-100 transition-colors ${
+                dateErrors.start ? 'border-red-500' : 'border-accent-20'
+              }`}
             />
             <span className="font-unageo text-sm text-accent-60">to</span>
             <input
@@ -73,10 +93,17 @@ export function AnalyticsFilters({
               onChange={(e) =>
                 setCustomDateRange({ ...customDateRange, end: e.target.value })
               }
-              className="flex-1 py-2 px-3 rounded-lg border border-accent-20 font-unageo text-[13px] text-secondary-000 bg-white outline-none focus:border-primary-100 transition-colors"
+              className={`flex-1 py-2 px-3 rounded-lg border font-unageo text-[13px] text-secondary-000 bg-white outline-none focus:border-primary-100 transition-colors ${
+                dateErrors.end ? 'border-red-500' : 'border-accent-20'
+              }`}
             />
-          </div>
-        </div>
+              </div>
+          {(dateErrors.start || dateErrors.end) && (
+            <p className="mt-1 text-xs text-red-600">
+              {dateErrors.start ?? dateErrors.end}
+            </p>
+          )}
+              </div>
       )}
 
       {/* Category */}

@@ -11,6 +11,8 @@ import Link from "next/link";
 import { useAuthAPI } from "@/services/useAuthAPI";
 import { useVendorCategories } from "@/hooks/useVendorCategories";
 import type { VendorRegisterAccountKind } from "@/types/auth";
+import { vendorSignUpFormSchema } from "@/lib/validations/authValidationSchema";
+import { zodFieldErrors } from "@/lib/validations/zodHelpers";
 
 const countries = [
   { code: "+1", name: "United States", flag: "🇺🇸" },
@@ -68,46 +70,21 @@ export default function SignUpPage() {
   };
 
   const validateForm = (): boolean => {
-    const next: FormErrors = {};
-
-    if (!formData.firstName.trim()) next.firstName = "First name is required";
-    if (!formData.lastName.trim()) next.lastName = "Last name is required";
-    if (!formData.email.trim()) {
-      next.email = "Email address is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      next.email = "Please enter a valid email address";
+    const result = vendorSignUpFormSchema.safeParse({
+      ...formData,
+      accountKind,
+      agreedToTerms,
+    });
+    if (!result.success) {
+      setErrors(zodFieldErrors(result.error) as FormErrors);
+      return false;
     }
-    if (!formData.password) {
-      next.password = "Password is required";
-    } else if (formData.password.length < 8) {
-      next.password = "Password must be at least 8 characters";
-    }
-    if (!formData.confirmPassword) {
-      next.confirmPassword = "Please confirm your password";
-    } else if (formData.confirmPassword !== formData.password) {
-      next.confirmPassword = "Passwords do not match";
-    }
-    if (!formData.phoneNumber.trim()) next.phoneNumber = "Phone number is required";
-
-    if (accountKind === "individual") {
-      if (!formData.serviceCategoryId.trim()) next.serviceCategoryId = "Service category is required";
-    } else {
-      if (!formData.businessName.trim()) next.businessName = "Business name is required";
-      if (!formData.businessCategoryId.trim()) next.businessCategoryId = "Business category is required";
-    }
-
-    if (!formData.streetAddress.trim()) next.streetAddress = "Street address is required";
-    if (!formData.city.trim()) next.city = "City is required";
-    if (!formData.state.trim()) next.state = "State is required";
-    if (!formData.zipCode.trim()) next.zipCode = "Zip code is required";
-    if (!formData.country.trim()) next.country = "Country is required";
-
-    setErrors(next);
-    return Object.keys(next).length === 0;
+    setErrors({});
+    return true;
   };
 
   const handleContinue = async () => {
-    if (!validateForm() || !agreedToTerms) return;
+    if (!validateForm()) return;
     try {
       const serviceCat = categories.find((c) => c.id === Number(formData.serviceCategoryId));
       const businessCat = categories.find((c) => c.id === Number(formData.businessCategoryId));
@@ -524,7 +501,10 @@ export default function SignUpPage() {
                 <Checkbox
                   id="terms"
                   checked={agreedToTerms}
-                  onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                  onCheckedChange={(checked) => {
+                    setAgreedToTerms(checked === true);
+                    clearError("agreedToTerms");
+                  }}
                   className="mt-1"
                 />
                 <label htmlFor="terms" className="flex-1 cursor-pointer text-base leading-5 text-accent-100">
@@ -545,6 +525,9 @@ export default function SignUpPage() {
                   of <strong>Afrivendor.</strong>
                 </label>
               </div>
+              {errors.agreedToTerms ? (
+                <p className="text-sm text-red-600">{errors.agreedToTerms}</p>
+              ) : null}
 
               <button
                 type="button"

@@ -5,6 +5,9 @@ import { X, Calendar, Clock, AlertTriangle, ArrowRight } from "lucide-react";
 import { VendorAppointment } from "@/types/appointments";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMobile } from "@/hooks/useMobile";
+import { rescheduleAppointmentSchema } from "@/lib/validations/appointmentSchemas";
+import { firstZodIssueMessage } from "@/lib/validations/zodHelpers";
+import { toast } from "sonner";
 
 interface RescheduleDrawerProps {
   isOpen: boolean;
@@ -28,7 +31,17 @@ export function RescheduleDrawer({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onConfirm(appointment.id, date, time, notes);
+    const parsed = rescheduleAppointmentSchema.safeParse({ date, time, notes });
+    if (!parsed.success) {
+      toast.error(firstZodIssueMessage(parsed.error));
+      return;
+    }
+    onConfirm(
+      appointment.id,
+      parsed.data.date,
+      parsed.data.time,
+      parsed.data.notes ?? ""
+    );
     onClose();
   };
 

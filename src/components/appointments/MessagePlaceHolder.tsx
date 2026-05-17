@@ -5,7 +5,7 @@ import { X, Send, Paperclip } from "lucide-react";
 import { VendorAppointment } from "@/types/appointments";
 import { Button } from "@/components/ui/button";
 
-interface MessagePlaceHolderProps {
+interface MessagePlaceholderProps {
     onClose: () => void;
     appointment: VendorAppointment | null;
     /** When true, show a CTA to create the Stream channel (matches client `MessagingPlaceholderSheet` flow). */
@@ -13,12 +13,12 @@ interface MessagePlaceHolderProps {
     onCreateChannel?: () => void;
 }
 
-export function MessagePlaceHolder({
+export function MessagePlaceholder({
     onClose,
     appointment,
     showCreateChannelCta = false,
     onCreateChannel,
-}: MessagePlaceHolderProps) {
+}: MessagePlaceholderProps) {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     if (!appointment) return null;

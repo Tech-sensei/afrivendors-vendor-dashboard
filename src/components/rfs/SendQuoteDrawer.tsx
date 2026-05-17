@@ -5,6 +5,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useState, useEffect } from 'react';
 import { RFSRequest } from '@/data/rfs';
 import { useMobile } from '@/hooks/useMobile';
+import { sendQuoteFormSchema } from '@/lib/validations/rfsSchemas';
+import { firstZodIssueMessage } from '@/lib/validations/zodHelpers';
+import { toast } from 'sonner';
 
 interface SendQuoteDrawerProps {
   isOpen: boolean;
@@ -41,12 +44,14 @@ export function SendQuoteDrawer({
   if (!request) return null;
 
   const handleSubmit = () => {
-    if (quoteAmount && message) {
-      onConfirm(request.id, quoteAmount, message);
-      // Reset form
-      setQuoteAmount('');
-      setMessage('');
+    const parsed = sendQuoteFormSchema.safeParse({ quoteAmount, message });
+    if (!parsed.success) {
+      toast.error(firstZodIssueMessage(parsed.error));
+      return;
     }
+    onConfirm(request.id, parsed.data.quoteAmount, parsed.data.message);
+    setQuoteAmount('');
+    setMessage('');
   };
 
   const isFormValid = quoteAmount && message;

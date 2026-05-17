@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { VendorAppointment } from "@/types/appointments";
 import { useMobile } from "@/hooks/useMobile";
 import { cn } from "@/lib/utils";
-import { MessagePlaceHolder } from "./messagePlaceHolder";
+import { MessagePlaceholder } from "./MessagePlaceholder";
 import {
   useCreateStreamChatChannel,
   useStreamChatToken,
@@ -168,7 +168,7 @@ export function MessageDrawer({
                 channelId={`appointment-${appointment.id}`}
               />
             ) : (
-              <MessagePlaceHolder
+              <MessagePlaceholder
                 appointment={appointment}
                 onClose={onClose}
                 showCreateChannelCta

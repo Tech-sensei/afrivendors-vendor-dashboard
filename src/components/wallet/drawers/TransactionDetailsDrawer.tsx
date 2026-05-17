@@ -192,13 +192,33 @@ export function TransactionDetailsDrawer({
                   </div>
                   <span className="font-bold text-secondary-000">{transaction.date}</span>
                 </div>
-                <div className="p-5 flex justify-between items-center text-sm">
+                <div className="p-5 flex justify-between items-center text-sm border-b border-secondary-600">
                   <div className="flex items-center gap-3 text-accent-80">
                     <Clock className="w-4 h-4 text-primary-100" />
                     Time
                   </div>
                   <span className="font-bold text-secondary-000">{transaction.time}</span>
                 </div>
+                <div className="p-5 flex justify-between items-center text-sm border-b border-secondary-600 gap-4">
+                  <div className="flex items-center gap-3 text-accent-80 shrink-0">
+                    <Receipt className="w-4 h-4 text-primary-100" />
+                    Type
+                  </div>
+                  <span className="font-bold text-secondary-000 text-right">
+                    {transaction.title}
+                  </span>
+                </div>
+                {transaction.description ? (
+                  <div className="p-5 flex flex-col gap-2 text-sm">
+                    <div className="flex items-center gap-3 text-accent-80">
+                      <ShieldCheck className="w-4 h-4 text-primary-100" />
+                      Description
+                    </div>
+                    <p className="font-bold text-secondary-000 leading-relaxed">
+                      {transaction.description}
+                    </p>
+                  </div>
+                ) : null}
               </div>
             </div>
 

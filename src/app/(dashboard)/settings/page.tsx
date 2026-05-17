@@ -78,7 +78,11 @@ export default function VendorSettings() {
   const closeDrawer = () => setActiveDrawer(null);
 
   // Handlers
-  const handlePasswordSubmit = async (data: any) => {
+  const handlePasswordSubmit = async (data: {
+    current: string;
+    new: string;
+    confirm: string;
+  }) => {
     try {
       await changePasswordAsync({
         oldPassword: data.current,
@@ -129,12 +133,8 @@ export default function VendorSettings() {
   };
 
   const handleDeleteAccountConfirm = (confirmationText: string) => {
-    if (confirmationText === "DELETE") {
-      toast.error("Account deletion requested. Our team will contact you.");
-      closeDrawer();
-    } else {
-      toast.error("Please type DELETE to confirm");
-    }
+    toast.error("Account deletion requested. Our team will contact you.");
+    closeDrawer();
   };
 
   return (

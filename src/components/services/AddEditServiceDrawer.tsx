@@ -3,6 +3,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, FileText, Tag, DollarSign, Clock, AlignLeft, Save, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { Service } from './ServiceCard';
+import {
+  validateServiceImageFile,
+  vendorServiceFormSchema,
+} from '@/lib/validations/serviceSchemas';
+import { zodFieldErrors } from '@/lib/validations/zodHelpers';
+import { toast } from 'sonner';
 
 interface AddEditServiceDrawerProps {
   isOpen: boolean;
@@ -32,6 +38,7 @@ const defaultForm: FormState = {
 export function AddEditServiceDrawer({ isOpen, onClose, service, vendorCategory, onSave, isSaving = false }: AddEditServiceDrawerProps) {
   const [form, setForm] = useState<FormState>(defaultForm);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -54,8 +61,9 @@ export function AddEditServiceDrawer({ isOpen, onClose, service, vendorCategory,
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      alert('File size exceeds 5MB limit');
+    const imageError = validateServiceImageFile(file);
+    if (imageError) {
+      toast.error(imageError);
       return;
     }
     setForm((prev) => ({ ...prev, imageFile: file }));
@@ -64,6 +72,17 @@ export function AddEditServiceDrawer({ isOpen, onClose, service, vendorCategory,
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const result = vendorServiceFormSchema.safeParse(form);
+    if (!result.success) {
+      setErrors(zodFieldErrors(result.error));
+      return;
+    }
+    const imageError = validateServiceImageFile(form.imageFile);
+    if (imageError) {
+      toast.error(imageError);
+      return;
+    }
+    setErrors({});
     const payload = new FormData();
     payload.append('serviceName', form.serviceName);
     payload.append('price', form.price);

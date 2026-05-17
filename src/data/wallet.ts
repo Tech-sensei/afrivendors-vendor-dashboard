@@ -1,6 +1,8 @@
 export interface Transaction {
   id: string;
   type: "payment" | "withdrawal" | "commission" | "reversal";
+  /** Raw API transaction type (e.g. vendor_payout) */
+  apiType?: string;
   title: string;
   description: string;
   /** Plain numeric string (e.g. "10.20") for math and legacy UI */

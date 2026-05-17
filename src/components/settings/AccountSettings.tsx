@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import { User, Mail, Phone, Edit2, Save } from "lucide-react";
 import { toast } from "sonner";
+import { vendorAccountSettingsSchema } from "@/lib/validations/accountSettingsSchemas";
+import { firstZodIssueMessage } from "@/lib/validations/zodHelpers";
 
 interface AccountData {
   name: string;
@@ -19,6 +21,12 @@ export function AccountSettings({ initialData }: AccountSettingsProps) {
   const [isEditing, setIsEditing] = useState(false);
 
   const handleSave = () => {
+    const parsed = vendorAccountSettingsSchema.safeParse(data);
+    if (!parsed.success) {
+      toast.error(firstZodIssueMessage(parsed.error));
+      return;
+    }
+    setData(parsed.data);
     setIsEditing(false);
     toast.success("Account information updated successfully!");
   };

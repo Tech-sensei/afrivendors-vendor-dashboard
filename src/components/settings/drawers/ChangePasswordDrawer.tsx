@@ -2,13 +2,18 @@
 
 import React, { useState } from "react";
 import { X, Eye, EyeOff, Lock } from "lucide-react";
+import { changePasswordFormSchema } from "@/lib/validations/authValidationSchema";
+import { zodFieldErrors } from "@/lib/validations/zodHelpers";
+import type { ChangePasswordDrawerFormData } from "@/lib/validations/authValidationSchema";
 
 interface ChangePasswordDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: ChangePasswordDrawerFormData) => void;
   isSubmitting?: boolean;
 }
+
+type FieldErrors = Partial<Record<keyof ChangePasswordDrawerFormData, string>>;
 
 export function ChangePasswordDrawer({
   isOpen,
@@ -20,8 +25,25 @@ export function ChangePasswordDrawer({
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [data, setData] = useState({ current: "", new: "", confirm: "" });
+  const [errors, setErrors] = useState<FieldErrors>({});
 
   if (!isOpen) return null;
+
+  const clearField = (field: keyof ChangePasswordDrawerFormData) => {
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+  };
+
+  const handleSubmit = () => {
+    const result = changePasswordFormSchema.safeParse(data);
+    if (!result.success) {
+      setErrors(zodFieldErrors(result.error));
+      return;
+    }
+    setErrors({});
+    onSubmit(result.data);
+  };
 
   return (
     <>
@@ -35,6 +57,7 @@ export function ChangePasswordDrawer({
             Change Password
           </h3>
           <button
+            type="button"
             onClick={onClose}
             className="w-9 h-9 rounded-lg flex items-center justify-center text-zinc-400 hover:bg-zinc-50 transition-colors"
           >
@@ -44,7 +67,6 @@ export function ChangePasswordDrawer({
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           <div className="space-y-4">
-            {/* Current Password */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-secondary-000">
                 Current Password
@@ -53,9 +75,14 @@ export function ChangePasswordDrawer({
                 <input
                   type={showCurrent ? "text" : "password"}
                   value={data.current}
-                  onChange={(e) => setData({ ...data, current: e.target.value })}
+                  onChange={(e) => {
+                    setData({ ...data, current: e.target.value });
+                    clearField("current");
+                  }}
                   placeholder="Enter current password"
-                  className="w-full pl-4 pr-11 py-3 border border-zinc-200 rounded-xl focus:border-primary-100 outline-none transition-all font-unageo text-[15px] text-secondary-000"
+                  className={`w-full pl-4 pr-11 py-3 border rounded-xl focus:border-primary-100 outline-none transition-all font-unageo text-[15px] text-secondary-000 ${
+                    errors.current ? "border-red-500" : "border-zinc-200"
+                  }`}
                 />
                 <button
                   type="button"
@@ -65,9 +92,9 @@ export function ChangePasswordDrawer({
                   {showCurrent ? <EyeOff className="w-4.5 h-4.5 cursor-pointer" /> : <Eye className="w-4.5 h-4.5 cursor-pointer" />}
                 </button>
               </div>
+              {errors.current ? <p className="text-xs text-red-600">{errors.current}</p> : null}
             </div>
 
-            {/* New Password */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-secondary-000">
                 New Password
@@ -76,9 +103,14 @@ export function ChangePasswordDrawer({
                 <input
                   type={showNew ? "text" : "password"}
                   value={data.new}
-                  onChange={(e) => setData({ ...data, new: e.target.value })}
+                  onChange={(e) => {
+                    setData({ ...data, new: e.target.value });
+                    clearField("new");
+                  }}
                   placeholder="Enter new password"
-                  className="w-full pl-4 pr-11 py-3 border border-zinc-200 rounded-xl focus:border-primary-100 outline-none transition-all font-unageo text-[15px] text-secondary-000"
+                  className={`w-full pl-4 pr-11 py-3 border rounded-xl focus:border-primary-100 outline-none transition-all font-unageo text-[15px] text-secondary-000 ${
+                    errors.new ? "border-red-500" : "border-zinc-200"
+                  }`}
                 />
                 <button
                   type="button"
@@ -88,9 +120,9 @@ export function ChangePasswordDrawer({
                   {showNew ? <EyeOff className="w-4.5 h-4.5 cursor-pointer" /> : <Eye className="w-4.5 h-4.5 cursor-pointer" />}
                 </button>
               </div>
+              {errors.new ? <p className="text-xs text-red-600">{errors.new}</p> : null}
             </div>
 
-            {/* Confirm Password */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-secondary-000">
                 Confirm New Password
@@ -99,9 +131,14 @@ export function ChangePasswordDrawer({
                 <input
                   type={showConfirm ? "text" : "password"}
                   value={data.confirm}
-                  onChange={(e) => setData({ ...data, confirm: e.target.value })}
+                  onChange={(e) => {
+                    setData({ ...data, confirm: e.target.value });
+                    clearField("confirm");
+                  }}
                   placeholder="Confirm new password"
-                  className="w-full pl-4 pr-11 py-3 border border-zinc-200 rounded-xl focus:border-primary-100 outline-none transition-all font-unageo text-[15px] text-secondary-000"
+                  className={`w-full pl-4 pr-11 py-3 border rounded-xl focus:border-primary-100 outline-none transition-all font-unageo text-[15px] text-secondary-000 ${
+                    errors.confirm ? "border-red-500" : "border-zinc-200"
+                  }`}
                 />
                 <button
                   type="button"
@@ -111,6 +148,7 @@ export function ChangePasswordDrawer({
                   {showConfirm ? <EyeOff className="w-4.5 h-4.5 cursor-pointer" /> : <Eye className="w-4.5 h-4.5 cursor-pointer" />}
                 </button>
               </div>
+              {errors.confirm ? <p className="text-xs text-red-600">{errors.confirm}</p> : null}
             </div>
           </div>
 
@@ -129,20 +167,24 @@ export function ChangePasswordDrawer({
 
         <div className="p-6 border-t border-zinc-100 bg-secondary-800 flex gap-3 justify-end">
           <button
+            type="button"
             onClick={onClose}
             className="px-6 py-3 rounded-xl bg-white border border-accent-20 text-sm font-semibold text-secondary-000 hover:bg-secondary-700 hover:border-accent-40 transition-all active:scale-95 cursor-pointer shadow-sm"
           >
             Cancel
           </button>
           <button
-            onClick={() => onSubmit(data)}
+            type="button"
+            onClick={handleSubmit}
             disabled={isSubmitting}
             className="px-6 py-3 rounded-xl bg-primary-100 text-white text-sm font-semibold hover:bg-primary-100/90 transition-all shadow-lg shadow-primary-100/10 active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? 'Updating...' : 'Update Password'}
+            {isSubmitting ? "Updating..." : "Update Password"}
           </button>
         </div>
       </div>
     </>
   );
 }
+
+

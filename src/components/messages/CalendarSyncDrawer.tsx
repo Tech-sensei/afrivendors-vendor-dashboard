@@ -3,6 +3,9 @@
 import React, { useState } from 'react';
 import { X, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { calendarSyncFormSchema } from '@/lib/validations/messageSchemas';
+import { firstZodIssueMessage } from '@/lib/validations/zodHelpers';
+import { toast } from 'sonner';
 
 interface CalendarSyncDrawerProps {
   isOpen: boolean;
@@ -18,14 +21,21 @@ export function CalendarSyncDrawer({ isOpen, onClose, messageContent, onSave }: 
   const [note, setNote] = useState(messageContent);
 
   const handleSave = () => {
-    if (date && time && title) {
-      onSave(date, time, title, note);
-      // Reset
-      setDate('');
-      setTime('');
-      setTitle('New Appointment');
-      setNote('');
+    const parsed = calendarSyncFormSchema.safeParse({ date, time, title, note });
+    if (!parsed.success) {
+      toast.error(firstZodIssueMessage(parsed.error));
+      return;
     }
+    onSave(
+      parsed.data.date,
+      parsed.data.time,
+      parsed.data.title,
+      parsed.data.note ?? ''
+    );
+    setDate('');
+    setTime('');
+    setTitle('New Appointment');
+    setNote('');
   };
 
   return (

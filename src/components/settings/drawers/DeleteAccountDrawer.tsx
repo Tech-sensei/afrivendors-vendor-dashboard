@@ -2,6 +2,9 @@
 
 import React, { useState } from "react";
 import { X, AlertTriangle } from "lucide-react";
+import { deleteAccountConfirmationSchema } from "@/lib/validations/authValidationSchema";
+import { firstZodIssueMessage } from "@/lib/validations/zodHelpers";
+import { toast } from "sonner";
 
 interface DeleteAccountDrawerProps {
   isOpen: boolean;
@@ -98,7 +101,15 @@ export function DeleteAccountDrawer({
             </button>
           ) : (
             <button
-              onClick={() => onConfirm(confirmation)}
+              type="button"
+              onClick={() => {
+                const parsed = deleteAccountConfirmationSchema.safeParse({ confirmation });
+                if (!parsed.success) {
+                  toast.error(firstZodIssueMessage(parsed.error));
+                  return;
+                }
+                onConfirm(parsed.data.confirmation);
+              }}
               disabled={confirmation !== "DELETE"}
               className={`px-6 py-3 rounded-xl font-semibold text-sm transition-all active:scale-95 ${
                 confirmation === "DELETE"

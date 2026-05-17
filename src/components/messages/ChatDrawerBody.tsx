@@ -9,6 +9,8 @@ import { QueryChannelAPIResponse } from "stream-chat";
 import { toast } from "sonner";
 import streamChat from "@/lib/streamChat";
 import { formatMessageTime } from "@/data/messagesData";
+import { chatMessageSchema } from "@/lib/validations/messageSchemas";
+import { firstZodIssueMessage } from "@/lib/validations/zodHelpers";
 
 interface CustomerInfo {
   name: string;
@@ -65,7 +67,12 @@ export function ChatDrawerBody({ onClose, channelId }: ChatDrawerProps) {
   }, [channelId]);
 
   const handleSend = () => {
-    const t = inputText.trim();
+    const parsed = chatMessageSchema.safeParse({ message: inputText });
+    if (!parsed.success) {
+      toast.error(firstZodIssueMessage(parsed.error));
+      return;
+    }
+    const t = parsed.data.message;
     if (t) {
       void sendMessage(channelId, t)
         .then(() => {
