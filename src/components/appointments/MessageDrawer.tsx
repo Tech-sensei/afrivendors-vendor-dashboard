@@ -9,7 +9,7 @@ import {
   useCreateStreamChatChannel,
   useStreamChatToken,
 } from "@/services/useStreamChat";
-import { useCallback, useEffect, useState } from "react";
+import {  useEffect, useState } from "react";
 import useStreamChat from "@/hooks/useStreamChat";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
