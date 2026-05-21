@@ -34,6 +34,7 @@ export const useUpdateAppointmentStatus = () => {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: ["vendor-appointment-detail", id] });
+      queryClient.invalidateQueries({ queryKey: ["vendor-dashboard"] });
     },
   });
 };

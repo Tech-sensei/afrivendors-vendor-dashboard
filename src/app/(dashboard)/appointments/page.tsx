@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { XCircle, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -25,6 +26,10 @@ const TAB_STATUS_MAP: Record<AppointmentTabType, VendorAppointment['status']> = 
 };
 
 export default function VendorAppointments() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const appointmentDeepLinkHandled = useRef(false);
+
   const [activeTab, setActiveTab] = useState<AppointmentTabType>('upcoming');
   const [selectedAppointment, setSelectedAppointment] = useState<VendorAppointment | null>(null);
 
@@ -41,6 +46,29 @@ export default function VendorAppointments() {
   });
 
   const { data: appointments = [], isLoading } = useVendorAppointments();
+
+  useEffect(() => {
+    const param = searchParams.get('appointmentId');
+    if (!param || appointmentDeepLinkHandled.current || isLoading) return;
+
+    const id = Number(param);
+    if (!Number.isFinite(id)) return;
+
+    const apt = appointments.find((a) => a.id === id);
+    appointmentDeepLinkHandled.current = true;
+
+    if (apt) {
+      setSelectedAppointment(apt);
+      setIsDetailsOpen(true);
+      router.replace('/appointments');
+      return;
+    }
+
+    if (appointments.length > 0) {
+      toast.error('Appointment not found.');
+      router.replace('/appointments');
+    }
+  }, [appointments, isLoading, router, searchParams]);
   const { mutate: updateStatus, isPending: isUpdating } = useUpdateAppointmentStatus();
 
   // Tab counts

@@ -13,12 +13,12 @@ interface MessagePlaceholderProps {
     onCreateChannel?: () => void;
 }
 
-export const  MessagePlaceholder = ({
+export function MessagePlaceholder({
     onClose,
     appointment,
     showCreateChannelCta = false,
     onCreateChannel,
-}: MessagePlaceholderProps) => {
+}: MessagePlaceholderProps) {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     if (!appointment) return null;

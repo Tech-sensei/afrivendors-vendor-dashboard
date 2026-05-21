@@ -10,11 +10,20 @@ import { VendorNotification, NotificationType } from '@/data/notifications';
 interface NotificationItemProps {
   notification: VendorNotification;
   onRead: (id: string) => void;
-  onDelete: (id: string) => void;
+  onDelete?: (id: string) => void;
+  onNavigate?: (notification: VendorNotification) => void;
   onAction?: (notification: VendorNotification, actionType: 'sync' | 'reminder') => void;
+  isMarkingRead?: boolean;
 }
 
-export function NotificationItem({ notification, onRead, onDelete, onAction }: NotificationItemProps) {
+export function NotificationItem({
+  notification,
+  onRead,
+  onDelete,
+  onNavigate,
+  onAction,
+  isMarkingRead = false,
+}: NotificationItemProps) {
   
   const getTimeAgo = (date: Date): string => {
     const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -28,9 +37,18 @@ export function NotificationItem({ notification, onRead, onDelete, onAction }: N
   const Icon = getIcon(notification.type);
   const iconBgColor = getIconColor(notification.type, notification.isRead);
 
+  const handleRowClick = () => {
+    if (!notification.isRead) {
+      onRead(notification.id);
+    }
+    if (onNavigate) {
+      onNavigate(notification);
+    }
+  };
+
   return (
     <div
-      onClick={() => !notification.isRead && onRead(notification.id)}
+      onClick={handleRowClick}
       className={`group relative p-5 border-b border-accent-10 transition-all duration-200 cursor-pointer
         ${notification.isRead 
           ? 'bg-white hover:bg-accent-10/10' 
@@ -86,11 +104,13 @@ export function NotificationItem({ notification, onRead, onDelete, onAction }: N
           <div className="flex flex-wrap gap-2 transition-opacity duration-200 sm:opacity-0 sm:group-hover:opacity-100">
              {!notification.isRead && (
                <button
+                 type="button"
+                 disabled={isMarkingRead}
                  onClick={(e) => { e.stopPropagation(); onRead(notification.id); }}
-                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-accent-20 hover:border-primary-100 hover:text-primary-100 text-accent-60 font-unageo text-xs font-bold transition-all shadow-sm"
+                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-accent-20 hover:border-primary-100 hover:text-primary-100 text-accent-60 font-unageo text-xs font-bold transition-all shadow-sm disabled:opacity-50"
                >
                  <Check size={14} />
-                 Mark Read
+                 {isMarkingRead ? 'Marking…' : 'Mark Read'}
                </button>
              )}
 
@@ -114,13 +134,16 @@ export function NotificationItem({ notification, onRead, onDelete, onAction }: N
                </button>
              )}
 
-             <button
-               onClick={(e) => { e.stopPropagation(); onDelete(notification.id); }}
-               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-accent-20 hover:border-red-500 hover:text-red-500 text-accent-60 font-unageo text-xs font-bold transition-all shadow-sm"
-             >
-               <Trash2 size={14} />
-               Delete
-             </button>
+             {onDelete && (
+               <button
+                 type="button"
+                 onClick={(e) => { e.stopPropagation(); onDelete(notification.id); }}
+                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-accent-20 hover:border-red-500 hover:text-red-500 text-accent-60 font-unageo text-xs font-bold transition-all shadow-sm"
+               >
+                 <Trash2 size={14} />
+                 Delete
+               </button>
+             )}
           </div>
         </div>
       </div>

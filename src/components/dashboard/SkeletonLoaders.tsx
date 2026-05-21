@@ -1,4 +1,46 @@
-import React from 'react';
+import React from "react";
+
+export function DashboardStatsSkeleton() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10 animate-pulse">
+      {[1, 2, 3, 4].map((i) => (
+        <div
+          key={i}
+          className="bg-white border border-accent-20/60 rounded-xl p-6 shadow-sm"
+        >
+          <div className="w-14 h-14 bg-zinc-200 rounded-xl mb-6" />
+          <div className="h-4 bg-zinc-100 rounded w-28 mb-3" />
+          <div className="h-10 bg-zinc-200 rounded w-24" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function WalletCardSkeleton() {
+  return (
+    <div className="bg-white border border-accent-20/60 rounded-xl p-6 shadow-sm animate-pulse">
+      <div className="h-6 bg-zinc-200 rounded w-36 mb-2" />
+      <div className="h-4 bg-zinc-100 rounded w-28 mb-6" />
+      <div className="h-36 bg-zinc-200 rounded-xl mb-6" />
+      <div className="h-12 bg-zinc-100 rounded-xl mb-3" />
+      <div className="h-12 bg-zinc-100 rounded-xl" />
+    </div>
+  );
+}
+
+export function AppointmentsListSkeleton() {
+  return (
+    <div className="bg-white border border-accent-20/60 rounded-xl p-6 shadow-sm animate-pulse">
+      <div className="h-6 bg-zinc-200 rounded w-48 mb-8" />
+      <div className="space-y-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-24 bg-zinc-50 rounded-xl" />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function EarningsChartSkeleton() {
   return (

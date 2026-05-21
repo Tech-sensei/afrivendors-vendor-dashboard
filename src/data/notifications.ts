@@ -1,5 +1,11 @@
 export type NotificationType = 'booking' | 'payment' | 'message' | 'review' | 'update' | 'reminder' | 'calendar-event' | 'pinned-message';
 
+/** API `referenceType` values (extend as backend adds more). */
+export type NotificationReferenceType =
+  | "appointment_booking"
+  | "chat_message"
+  | (string & {});
+
 export interface VendorNotification {
   id: string;
   type: NotificationType;
@@ -7,7 +13,10 @@ export interface VendorNotification {
   message: string;
   timestamp: Date;
   isRead: boolean;
-  actionUrl?: string; // Route to navigate to
+  /** Derived navigation target from referenceType + itemId */
+  actionUrl?: string;
+  referenceType?: NotificationReferenceType;
+  itemId?: number | null;
   isPinned?: boolean;
   eventDate?: string;
   reminderDate?: string;

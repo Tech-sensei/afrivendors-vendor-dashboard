@@ -4,9 +4,12 @@ import { motion, AnimatePresence } from "motion/react";
 import { VendorAppointment } from "@/types/appointments";
 import { useMobile } from "@/hooks/useMobile";
 import { cn } from "@/lib/utils";
-import { MessagePlaceholder } from "@/components/appointments/MessagePlaceHolder";
-import { useCreateStreamChatChannel, useStreamChatToken } from "@/services/useStreamChat";
-import { useEffect, useState } from "react";
+import { MessagePlaceholder } from "./MessagePlaceholder";
+import {
+  useCreateStreamChatChannel,
+  useStreamChatToken,
+} from "@/services/useStreamChat";
+import { useCallback, useEffect, useState } from "react";
 import useStreamChat from "@/hooks/useStreamChat";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
@@ -25,7 +28,11 @@ function getBannerImageUrl(gallery: VendorGalleryItem[] | undefined) {
   return banner ? banner.imageUrl : null;
 }
 
-export function MessageDrawer({ isOpen, onClose, appointment }: MessageDrawerProps) {
+export function MessageDrawer({
+  isOpen,
+  onClose,
+  appointment,
+}: MessageDrawerProps) {
   const isMobile = useMobile();
   const profile = useSelector((state: RootState) => state.auth.profile);
 
@@ -103,7 +110,13 @@ export function MessageDrawer({ isOpen, onClose, appointment }: MessageDrawerPro
     return () => {
       cancelled = true;
     };
-  }, [isOpen, appointment, streamClientReady, checkIfChannelExists, channelRecheckKey]);
+  }, [
+    isOpen,
+    appointment,
+    streamClientReady,
+    checkIfChannelExists,
+    channelRecheckKey,
+  ]);
 
   if (!appointment) return null;
 
@@ -140,7 +153,9 @@ export function MessageDrawer({ isOpen, onClose, appointment }: MessageDrawerPro
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
             className={cn(
               "fixed z-1000 flex flex-col overflow-hidden bg-[#F8F5F2] shadow-[-4px_0_24px_rgba(0,0,0,0.12)]",
-              isMobile ? "bottom-0 left-0 right-0 h-[92vh] rounded-t-[24px]" : "top-0 right-0 bottom-0 w-full max-w-md rounded-l-[24px]",
+              isMobile
+                ? "bottom-0 left-0 right-0 h-[92vh] rounded-t-[24px]"
+                : "top-0 right-0 bottom-0 w-full max-w-md rounded-l-[24px]",
             )}
           >
             {channelExists === null ? (
@@ -148,7 +163,10 @@ export function MessageDrawer({ isOpen, onClose, appointment }: MessageDrawerPro
                 <Loader2 className="h-8 w-8 animate-spin text-primary-100" />
               </div>
             ) : channelExists ? (
-              <ChatDrawerBody onClose={onClose} channelId={`appointment-${appointment.id}`} />
+              <ChatDrawerBody
+                onClose={onClose}
+                channelId={`appointment-${appointment.id}`}
+              />
             ) : (
               <MessagePlaceholder
                 appointment={appointment}

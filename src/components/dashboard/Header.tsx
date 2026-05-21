@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Menu, Bell } from 'lucide-react';
-import { mockNotifications } from '@/data/notifications';
+import { useUnreadNotificationCount } from '@/services/useNotifications';
 
 interface HeaderProps {
   title?: string;
@@ -16,7 +16,9 @@ export function Header({
   description = "Welcome back! Here's what's happening today.",
   onMenuToggle,
 }: HeaderProps) {
-  const unreadCount = mockNotifications.filter(n => !n.isRead).length;
+  const { data: unreadCount = 0 } = useUnreadNotificationCount();
+  const notificationBadge =
+    unreadCount > 99 ? '99+' : String(unreadCount);
 
   return (
     <header className="sticky top-0 z-10 bg-white border-b border-accent-20">
@@ -43,7 +45,7 @@ export function Header({
               <Bell className="w-5 h-5 text-accent-70 group-hover:text-current transition-colors" />
               {unreadCount > 0 && (
                 <span className="absolute top-1 right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-white">
-                  {unreadCount > 99 ? '99+' : unreadCount}
+                  {notificationBadge}
                 </span>
               )}
             </Link>

@@ -35,7 +35,7 @@ const unageo = localFont({
 
 export const metadata: Metadata = {
   title: "Afrivendors ",
-  description: "Connecting African Vendors to the World.",
+  description: "Connecting African Vendors to the World",
 };
 
 export default function RootLayout({

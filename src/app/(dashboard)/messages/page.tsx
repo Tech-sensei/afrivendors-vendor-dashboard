@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Search, Pin, PinOff, MessageSquare } from "lucide-react";
+import { toast } from "sonner";
 import { ChatDrawer } from "@/components/messages/ChatDrawer";
 import { CustomerInfoDrawer } from "@/components/messages/CustomerInfoDrawer";
 // import { SetReminderDrawer } from "@/components/messages/SetReminderDrawer";
@@ -19,6 +21,7 @@ import {
 import { Channel } from "stream-chat";
 import { ConversationListItem } from "@/components/messages/ConversationListItem";
 import streamChat from "@/lib/streamChat";
+import { findChannelForNotificationItem } from "@/lib/resolveStreamChannel";
 import { useQueryClient } from "@tanstack/react-query";
 
 function getBannerImageUrl(gallery: VendorGalleryItem[] | undefined) {
@@ -27,6 +30,10 @@ function getBannerImageUrl(gallery: VendorGalleryItem[] | undefined) {
 }
 
 export default function VendorMessages() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const deepLinkHandled = useRef(false);
+
   const user: VendorProfile | null = useSelector(
     (state: RootState) => state.auth.profile,
   );
@@ -150,6 +157,44 @@ export default function VendorMessages() {
     setSelectedConversation(conversation);
     setIsChatOpen(true);
   };
+
+  // Open conversation from notification deep link (?itemId= or ?channelId=)
+  useEffect(() => {
+    const channelIdParam = searchParams.get("channelId");
+    const itemIdParam = searchParams.get("itemId");
+    if (!channelIdParam && !itemIdParam) {
+      deepLinkHandled.current = false;
+      return;
+    }
+    if (!streamReady || deepLinkHandled.current) return;
+
+    let channel: Channel | undefined;
+
+    if (channelIdParam) {
+      channel = conversations.find((c) => String(c.id) === channelIdParam);
+    } else if (itemIdParam) {
+      const itemId = Number(itemIdParam);
+      if (Number.isFinite(itemId)) {
+        channel = findChannelForNotificationItem(conversations, itemId);
+      }
+    }
+
+    if (!channel && conversations.length === 0) {
+      return;
+    }
+
+    deepLinkHandled.current = true;
+
+    if (channel) {
+      setSelectedConversation(channel);
+      setIsChatOpen(true);
+      router.replace("/messages");
+      return;
+    }
+
+    toast.error("Conversation not found. It may have been removed.");
+    router.replace("/messages");
+  }, [conversations, router, searchParams, streamReady]);
 
   const handleTogglePin = (conversationId: string, e: React.MouseEvent) => {
     e.preventDefault();
