@@ -1,244 +1,302 @@
 "use client";
 
-import React, { useState } from 'react';
-import { AlertCircle, CheckCircle } from 'lucide-react';
-import { toast } from 'sonner';
+import { useMemo, useState } from "react";
+import { Search } from "lucide-react";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { mockVendorCustomRequests } from "@/data/mockVendorCustomRequests";
+import {
+  VENDOR_CUSTOM_REQUEST_TABS,
+  countVendorRequestsByTab,
+  filterVendorRequestsByTab,
+} from "@/lib/vendorCustomRequestFilters";
+import { formatMoney } from "@/lib/vendorCustomRequestUi";
+import type {
+  VendorCustomRequest,
+  VendorCustomRequestTabId,
+  VendorQuote,
+  VendorQuoteLineItem,
+} from "@/types/vendorCustomRequests";
+import { VendorCustomRequestListCard } from "@/components/custom-requests/VendorCustomRequestListCard";
+import { VendorCustomRequestEmptyState } from "@/components/custom-requests/VendorCustomRequestEmptyState";
+import { VendorCustomRequestDetailDrawer } from "@/components/custom-requests/VendorCustomRequestDetailDrawer";
+import { VendorSendQuoteDrawer } from "@/components/custom-requests/VendorSendQuoteDrawer";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
-// Data & Types
-import { mockRFSRequests, RFSRequest, RFSStatus } from '@/data/rfs';
-
-// Components
-import { RFSTabs } from '@/components/rfs/RFSTabs';
-import { RFSCard } from '@/components/rfs/RFSCard';
-import { RFSFilters, RFSFiltersState } from '@/components/rfs/RFSFilters';
-import { RFSDetailsDrawer } from '@/components/rfs/RFSDetailsDrawer';
-import { SendQuoteDrawer } from '@/components/rfs/SendQuoteDrawer';
-import { DeclineRFSDrawer } from '@/components/rfs/DeclineRFSDrawer';
-import { ConfirmModal } from '@/components/ui/ConfirmModal';
-
-export default function VendorRFSRequests() {
-  const [activeTab, setActiveTab] = useState<RFSStatus>('new');
-  const [requests, setRequests] = useState<RFSRequest[]>(mockRFSRequests);
-  const [selectedRequest, setSelectedRequest] = useState<RFSRequest | null>(null);
-  
-  // Drawer States
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [isSendQuoteOpen, setIsSendQuoteOpen] = useState(false);
-  const [isDeclineOpen, setIsDeclineOpen] = useState(false);
-  const [isAcceptConfirmOpen, setIsAcceptConfirmOpen] = useState(false);
-
-  // Filter State
-  const [filters, setFilters] = useState<RFSFiltersState>({
-    search: '',
-    category: 'all',
-    budgetRange: 'all'
+function todayLabel() {
+  return new Date().toLocaleDateString("en-GB", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   });
+}
 
-  // Calculate counts for tabs
-  const counts: Record<RFSStatus, number> = {
-    new: requests.filter(r => r.status === 'new').length,
-    accepted: requests.filter(r => r.status === 'accepted').length,
-    'price-pending': requests.filter(r => r.status === 'price-pending').length,
-    ignored: requests.filter(r => r.status === 'ignored').length
-  };
+export default function CustomRequestsPage() {
+  const [requests, setRequests] = useState<VendorCustomRequest[]>(
+    mockVendorCustomRequests
+  );
+  const [activeTab, setActiveTab] =
+    useState<VendorCustomRequestTabId>("incoming");
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<VendorCustomRequest | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [quoteOpen, setQuoteOpen] = useState(false);
+  const [quoteEditMode, setQuoteEditMode] = useState(false);
+  const [passTargetId, setPassTargetId] = useState<string | null>(null);
+  const [completeTargetId, setCompleteTargetId] = useState<string | null>(
+    null
+  );
 
-  const getFilteredRequests = () => {
-    let filtered = requests.filter(req => req.status === activeTab);
+  const filteredByTab = useMemo(
+    () => filterVendorRequestsByTab(requests, activeTab),
+    [requests, activeTab]
+  );
 
-    // Apply search filter
-    if (filters.search) {
-      filtered = filtered.filter(req =>
-        req.customerName.toLowerCase().includes(filters.search.toLowerCase()) ||
-        req.serviceTitle.toLowerCase().includes(filters.search.toLowerCase()) ||
-        req.description.toLowerCase().includes(filters.search.toLowerCase())
-      );
-    }
-
-    // Apply category filter
-    if (filters.category !== 'all') {
-      filtered = filtered.filter(req =>
-        req.serviceCategory.toLowerCase().includes(filters.category.toLowerCase())
-      );
-    }
-
-    // Apply budget range filter
-    if (filters.budgetRange !== 'all') {
-      filtered = filtered.filter(req => {
-        const budget = req.budget.toLowerCase();
-        if (filters.budgetRange === '0-50') return budget.includes('$') && !budget.includes('100') && !budget.includes('200');
-        if (filters.budgetRange === '50-100') return budget.includes('$') && (budget.includes('50') || budget.includes('60') || budget.includes('70') || budget.includes('80') || budget.includes('90') || budget.includes('100'));
-        if (filters.budgetRange === '100-200') return budget.includes('100') || budget.includes('120') || budget.includes('150') || budget.includes('180');
-        if (filters.budgetRange === '200+') return budget.includes('200') || budget.includes('300');
-        return true;
-      });
-    }
-
-    return filtered;
-  };
-
-  const filteredRequests = getFilteredRequests();
-
-  // Handlers
-  const handleViewDetails = (id: string) => {
-    const request = requests.find(r => r.id === id);
-    if (request) {
-      setSelectedRequest(request);
-      setIsDetailsOpen(true);
-    }
-  };
-
-  const handleSendQuoteClick = (id: string) => {
-    const request = requests.find(r => r.id === id);
-    if (request) {
-      setSelectedRequest(request);
-      setIsDetailsOpen(false);
-      setIsSendQuoteOpen(true);
-    }
-  };
-
-  const handleConfirmQuote = (requestId: string, amount: string, message: string) => {
-    const request = requests.find(r => r.id === requestId);
-    const isEditing = request?.status === 'price-pending';
-    
-    setRequests(prev =>
-      prev.map(req => (req.id === requestId ? { 
-        ...req, 
-        status: 'price-pending' as const,
-        quoteAmount: amount,
-        quoteMessage: message,
-        quoteSentDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-      } : req))
+  const filteredRequests = useMemo(() => {
+    if (!search.trim()) return filteredByTab;
+    const q = search.toLowerCase();
+    return filteredByTab.filter(
+      (r) =>
+        r.title.toLowerCase().includes(q) ||
+        r.customerName.toLowerCase().includes(q) ||
+        r.orderReferenceId.toLowerCase().includes(q) ||
+        r.description.toLowerCase().includes(q)
     );
-    setIsSendQuoteOpen(false);
-    
-    toast.success(isEditing 
-      ? `Quote updated for ${request?.customerName}!` 
-      : `Quote of $${amount} sent to ${request?.customerName}!`
+  }, [filteredByTab, search]);
+
+  const openDetail = (request: VendorCustomRequest) => {
+    setSelected(request);
+    setDetailOpen(true);
+  };
+
+  const openSendQuote = (request: VendorCustomRequest, edit = false) => {
+    setSelected(request);
+    setQuoteEditMode(edit);
+    setDetailOpen(false);
+    setQuoteOpen(true);
+  };
+
+  const handleConfirmQuote = (payload: {
+    lineItems: VendorQuoteLineItem[];
+    message: string;
+    validUntil: string;
+  }) => {
+    if (!selected) return;
+    const total = payload.lineItems.reduce((s, i) => s + i.amount, 0);
+    const label = todayLabel();
+    const quote: VendorQuote = {
+      id: selected.myQuote?.id ?? `vq-${Date.now()}`,
+      lineItems: payload.lineItems,
+      totalAmount: total,
+      message: payload.message,
+      validUntil: payload.validUntil,
+      sentAt: selected.myQuote?.sentAt ?? label,
+      status: "pending",
+    };
+
+    setRequests((prev) =>
+      prev.map((r) =>
+        r.id !== selected.id
+          ? r
+          : {
+              ...r,
+              status: "quoted" as const,
+              myQuote: quote,
+              timeline: quoteEditMode
+                ? r.timeline.map((e, i) =>
+                    i === r.timeline.length - 1
+                      ? {
+                          at: label,
+                          label: `Quote updated · ${formatMoney(total)}`,
+                        }
+                      : e
+                  )
+                : [
+                    ...r.timeline,
+                    {
+                      at: label,
+                      label: `Your quote sent · ${formatMoney(total)}`,
+                    },
+                  ],
+            }
+      )
     );
-  };
 
-  const handleAccept = (id: string) => {
-    const request = requests.find(r => r.id === id);
-    if (request) {
-      setSelectedRequest(request);
-      setIsAcceptConfirmOpen(true);
-    }
-  };
-
-  const handleConfirmAccept = () => {
-    if (!selectedRequest) return;
-    
-    setRequests(prev =>
-      prev.map(req => (req.id === selectedRequest.id ? { ...req, status: 'accepted' as const } : req))
+    toast.success(
+      quoteEditMode
+        ? "Quote updated. The client can review your new price."
+        : `Quote of ${formatMoney(total)} sent. Awaiting client decision.`
     );
-    setIsAcceptConfirmOpen(false);
-    setIsDetailsOpen(false);
-    toast.success(`Request from ${selectedRequest.customerName} accepted!`);
+    setQuoteOpen(false);
+    setActiveTab("quoted");
   };
 
-  const handleDeclineClick = (id: string) => {
-    const request = requests.find(r => r.id === id);
-    if (request) {
-      setSelectedRequest(request);
-      setIsDetailsOpen(false);
-      setIsDeclineOpen(true);
-    }
-  };
-
-  const handleConfirmDecline = (requestId: string) => {
-    const request = requests.find(r => r.id === requestId);
-    setRequests(prev =>
-      prev.map(req => (req.id === requestId ? { ...req, status: 'ignored' as const } : req))
+  const confirmPass = () => {
+    if (!passTargetId) return;
+    const label = todayLabel();
+    setRequests((prev) =>
+      prev.map((r) =>
+        r.id !== passTargetId
+          ? r
+          : {
+              ...r,
+              status: "passed" as const,
+              timeline: [
+                ...r.timeline,
+                { at: label, label: "You passed on this request" },
+              ],
+            }
+      )
     );
-    setIsDeclineOpen(false);
-    toast.error(`Request from ${request?.customerName} declined.`);
+    toast.message("Request passed");
+    setPassTargetId(null);
+    setDetailOpen(false);
+    setActiveTab("passed");
   };
+
+  const confirmComplete = () => {
+    if (!completeTargetId) return;
+    const label = todayLabel();
+    setRequests((prev) =>
+      prev.map((r) =>
+        r.id !== completeTargetId
+          ? r
+          : {
+              ...r,
+              status: "completed" as const,
+              timeline: [
+                ...r.timeline,
+                { at: label, label: "You marked job complete" },
+              ],
+            }
+      )
+    );
+    toast.success("Job marked complete. Client will release escrow when ready.");
+    setCompleteTargetId(null);
+    setDetailOpen(false);
+    setActiveTab("completed");
+  };
+
+  const selectedLive =
+    selected && requests.find((r) => r.id === selected.id)
+      ? requests.find((r) => r.id === selected.id)!
+      : selected;
 
   return (
-    <div className="max-w-360 mx-auto">
-      {/* Header Area */}
-      <div className="mb-12">
-        <h1 className="font-unbounded text-3xl font-black text-secondary-000 tracking-tight mb-2">
-          Service Requests
+    <div className="mx-auto max-w-5xl">
+      <div className="mb-8">
+        <h1 className="mb-2 font-unbounded text-[28px] font-semibold leading-8 text-secondary-200">
+          Custom requests
         </h1>
-        <p className="font-unageo text-accent-60 text-lg">
-          Manage and respond to custom service requirements from your customers.
+        <p className="max-w-2xl text-sm text-accent-80">
+          Clients post jobs in your category. Send a quote with a breakdown —
+          when they accept and pay, the job becomes active and payment is held in
+          escrow until they release it.
         </p>
       </div>
 
-      {/* Tabs Section */}
-      <RFSTabs 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
-        counts={counts} 
-      />
+      <div className="mb-6 flex gap-2 overflow-x-auto pb-1">
+        {VENDOR_CUSTOM_REQUEST_TABS.map((tab) => {
+          const count = countVendorRequestsByTab(requests, tab.id);
+          const active = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "shrink-0 rounded-full px-4 py-2.5 text-sm font-semibold transition-all",
+                active
+                  ? "bg-secondary-000 text-white shadow-md"
+                  : "border border-accent-20 bg-white text-secondary-300 hover:border-accent-40"
+              )}
+            >
+              {tab.label}
+              {count > 0 && (
+                <span
+                  className={cn(
+                    "ml-1.5 rounded-full px-1.5 py-0.5 text-xs",
+                    active
+                      ? "bg-white/20"
+                      : "bg-primary-100/10 text-primary-100"
+                  )}
+                >
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
 
-      {/* Filter Section */}
-      <RFSFilters onFilterChange={setFilters} />
+      <div className="relative mb-6">
+        <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-accent-60" />
+        <input
+          type="search"
+          placeholder="Search by title, client, or reference…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-11 w-full rounded-[18px] border border-accent-20 bg-white pl-11 pr-4 text-sm outline-none focus:border-primary-100"
+        />
+      </div>
 
-      {/* Requests List */}
-      {filteredRequests.length === 0 ? (
-        <div className="bg-white border border-accent-20/60 rounded-2xl p-20 text-center shadow-sm">
-          <div className="w-20 h-20 bg-accent-10 rounded-full flex items-center justify-center mx-auto mb-6">
-            <AlertCircle size={36} className="text-accent-40" />
-          </div>
-          <h3 className="font-unbounded text-xl font-bold text-secondary-000 mb-2">
-            No {activeTab.replace('-', ' ')} requests found
-          </h3>
-          <p className="font-unageo text-accent-60 max-w-sm mx-auto">
-            Try adjusting your filters or checking other tabs for requests.
-          </p>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-6">
+      {filteredRequests.length > 0 ? (
+        <div className="space-y-4">
           {filteredRequests.map((request) => (
-            <RFSCard
+            <VendorCustomRequestListCard
               key={request.id}
               request={request}
-              onViewDetails={handleViewDetails}
-              onAccept={handleAccept}
-              onDecline={handleDeclineClick}
-              onSendQuote={handleSendQuoteClick}
+              onViewDetails={openDetail}
+              onSendQuote={(r) => openSendQuote(r, false)}
+              onPass={(id) => setPassTargetId(id)}
+              onMarkComplete={(id) => setCompleteTargetId(id)}
             />
           ))}
         </div>
+      ) : (
+        <VendorCustomRequestEmptyState tab={activeTab} />
       )}
 
-      {/* Drawers */}
-      <RFSDetailsDrawer
-        isOpen={isDetailsOpen}
-        onClose={() => setIsDetailsOpen(false)}
-        request={selectedRequest}
-        onSendQuote={() => handleSendQuoteClick(selectedRequest?.id || '')}
-        onAccept={() => handleAccept(selectedRequest?.id || '')}
-        onDecline={() => handleDeclineClick(selectedRequest?.id || '')}
+      <VendorCustomRequestDetailDrawer
+        isOpen={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        request={selectedLive}
+        onSendQuote={() =>
+          selectedLive && openSendQuote(selectedLive, false)
+        }
+        onEditQuote={() => selectedLive && openSendQuote(selectedLive, true)}
+        onPass={() => selectedLive && setPassTargetId(selectedLive.id)}
+        onMarkComplete={() =>
+          selectedLive && setCompleteTargetId(selectedLive.id)
+        }
       />
 
-      <SendQuoteDrawer
-        isOpen={isSendQuoteOpen}
-        onClose={() => setIsSendQuoteOpen(false)}
-        request={selectedRequest}
+      <VendorSendQuoteDrawer
+        isOpen={quoteOpen}
+        onClose={() => setQuoteOpen(false)}
+        request={selectedLive}
+        isEditMode={quoteEditMode}
         onConfirm={handleConfirmQuote}
       />
 
-      <DeclineRFSDrawer
-        isOpen={isDeclineOpen}
-        onClose={() => setIsDeclineOpen(false)}
-        request={selectedRequest}
-        onConfirm={handleConfirmDecline}
+      <ConfirmModal
+        open={passTargetId !== null}
+        onOpenChange={(open) => !open && setPassTargetId(null)}
+        onConfirm={confirmPass}
+        title="Pass on this request?"
+        description="You will not be able to quote on this job. Other vendors in your category may still respond."
+        confirmText="Pass"
+        cancelText="Cancel"
       />
 
       <ConfirmModal
-        open={isAcceptConfirmOpen}
-        onOpenChange={setIsAcceptConfirmOpen}
-        onConfirm={handleConfirmAccept}
-        title="Accept Service Request?"
-        description={`You are about to accept the request from ${selectedRequest?.customerName}. This will notify the customer that you're ready to proceed.`}
-        confirmText="Yes, Accept Request"
-        cancelText="No, Go Back"
-        icon={CheckCircle}
-        iconColor="text-green-600"
-        iconBg="bg-green-50"
+        open={completeTargetId !== null}
+        onOpenChange={(open) => !open && setCompleteTargetId(null)}
+        onConfirm={confirmComplete}
+        title="Mark job as complete?"
+        description="The client will be notified. Funds stay in escrow until they release payment."
+        confirmText="Mark complete"
+        cancelText="Cancel"
       />
     </div>
   );

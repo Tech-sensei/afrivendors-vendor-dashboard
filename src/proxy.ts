@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 const protectedRoutes = [
   '/',
   '/appointments',
-  '/rfs-requests',
+  '/custom-requests',
   '/services',
   '/wallet',
   '/payouts',
@@ -53,7 +53,7 @@ export const config = {
   matcher: [
     '/',
     '/appointments/:path*',
-    '/rfs-requests/:path*',
+    '/custom-requests/:path*',
     '/services/:path*',
     '/wallet/:path*',
     '/payouts/:path*',

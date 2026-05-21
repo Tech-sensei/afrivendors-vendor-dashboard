@@ -13,9 +13,10 @@ const pageMetadata: Record<string, { title: string; description: string }> = {
     title: 'Appointments',
     description: 'Manage and view all your scheduled appointments',
   },
-  '/rfs-requests': {
-    title: 'RFS Requests',
-    description: 'View and manage your Request for Service requests',
+  '/custom-requests': {
+    title: 'Custom requests',
+    description:
+      'Quote on client jobs in your category and track active work through escrow payout',
   },
   '/services': {
     title: 'Services',

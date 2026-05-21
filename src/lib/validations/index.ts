@@ -7,6 +7,7 @@ export * from "./walletSchemas";
 export * from "./supportTicketSchemas";
 export * from "./appointmentSchemas";
 export * from "./rfsSchemas";
+export * from "./vendorCustomRequestSchemas";
 export * from "./messageSchemas";
 export * from "./accountSettingsSchemas";
 export * from "./analyticsSchemas";
