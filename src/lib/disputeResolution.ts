@@ -1,0 +1,1 @@
+export const DISPUTE_RESOLUTION_MIN_LENGTH = 20;

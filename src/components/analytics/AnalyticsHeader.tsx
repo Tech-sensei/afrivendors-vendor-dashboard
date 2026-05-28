@@ -16,6 +16,9 @@ export function AnalyticsHeader({ onExport }: AnalyticsHeaderProps) {
         <p className="font-unageo text-base text-accent-60">
           Track your business performance and insights
         </p>
+        <p className="font-unageo text-sm text-accent-60 mt-1">
+          Showing last 7 days
+        </p>
       </div>
 
       <button

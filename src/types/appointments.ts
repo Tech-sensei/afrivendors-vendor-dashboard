@@ -22,6 +22,68 @@ export interface VendorAppointmentService {
 
 export type VendorAppointmentStatus = "pending" | "accepted" | "rejected" | "completed";
 
+/** UI tabs on the vendor appointments page. */
+export type VendorAppointmentTabId = "pending" | "upcoming" | "past" | "cancelled";
+
+/** `GET /vendor/appointments?status=` — API enum. */
+export type VendorAppointmentsApiStatus =
+  | "pending"
+  | "accepted"
+  | "rejected"
+  | "canceled"
+  | "completed";
+
+export function vendorAppointmentTabToApiStatuses(
+  tab: VendorAppointmentTabId
+): VendorAppointmentsApiStatus[] {
+  switch (tab) {
+    case "pending":
+      return ["pending"];
+    case "upcoming":
+      return ["accepted"];
+    case "past":
+      return ["completed"];
+    case "cancelled":
+      return ["canceled", "rejected"];
+    default:
+      return ["pending"];
+  }
+}
+
+export type VendorPaymentStatus =
+  | "pending"
+  | "paid"
+  | "failed"
+  | "released"
+  | "disputed"
+  | "refunded";
+
+export type VendorDisputeStatus =
+  | "pending"
+  | "under_review"
+  | "awaiting_vendor"
+  | "resolved";
+
+export interface VendorAppointmentDispute {
+  id: number;
+  reason: string;
+  resolution: string | null;
+  status: string;
+  resolver: string | null;
+  resolvedBy: number | null;
+  resolvedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function isVendorDisputeOpen(
+  dispute: VendorAppointmentDispute | null | undefined
+): boolean {
+  if (!dispute) return false;
+  const s = dispute.status.toLowerCase();
+  return s !== "resolved" && s !== "closed" && s !== "cancelled";
+}
+
 export interface VendorAppointment {
   id: number;
   user: VendorAppointmentUser;
@@ -40,7 +102,8 @@ export interface VendorAppointment {
   totalAmount: number;
   commissionAmount: number;
   vendorAmount: number;
-  paymentStatus: "pending" | "paid" | "failed";
+  paymentStatus: VendorPaymentStatus;
+  dispute?: VendorAppointmentDispute | null;
   createdAt: string;
   updatedAt: string;
 }

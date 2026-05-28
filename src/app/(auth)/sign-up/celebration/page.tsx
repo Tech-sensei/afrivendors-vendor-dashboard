@@ -61,7 +61,10 @@ export default function SignUpCelebrationPage() {
               You&apos;re almost there!
             </h1>
             <p className="mt-4 text-base leading-6 text-accent-80">
-              Your vendor account is being set up. Next, confirm your email so we can activate your access.
+              Your vendor account is being set up. You get{" "}
+              <span className="font-semibold text-secondary-000">6 months free</span>{" "}
+              marketplace visibility from today. Next, confirm your email so we can
+              activate your access.
             </p>
             {email ? (
               <p className="mt-2 text-sm font-semibold text-secondary-000">{email}</p>

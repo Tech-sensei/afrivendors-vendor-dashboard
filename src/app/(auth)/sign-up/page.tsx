@@ -13,6 +13,7 @@ import { useVendorCategories } from "@/hooks/useVendorCategories";
 import type { VendorRegisterAccountKind } from "@/types/auth";
 import { vendorSignUpFormSchema } from "@/lib/validations/authValidationSchema";
 import { zodFieldErrors } from "@/lib/validations/zodHelpers";
+import { PostalCodeAutocomplete } from "@/components/ui/PostalCodeAutocomplete";
 
 const countries = [
   { code: "+1", name: "United States", flag: "🇺🇸" },
@@ -162,7 +163,12 @@ export default function SignUpPage() {
               <h2 className="mb-2 font-unbounded text-[clamp(20px,3vw,24px)] font-semibold leading-tight text-secondary-000">
                 Create a vendor account
               </h2>
-              <p className="text-base leading-6 text-accent-80">Complete your details to get started on Afrivendors.</p>
+              <p className="text-base leading-6 text-accent-80">
+                Complete your details to get started. Includes{" "}
+                <span className="font-semibold text-secondary-000">6 months free</span>{" "}
+                marketplace visibility — then choose monthly, 3-month, 6-month, or
+                yearly billing.
+              </p>
             </div>
 
             <div className="mb-8 flex w-full rounded-full bg-secondary-700 p-1">
@@ -461,17 +467,35 @@ export default function SignUpPage() {
                     </div>
                     <div className="flex flex-col gap-2">
                       <label htmlFor="zipCode" className="text-base font-normal leading-6 text-secondary-000">
-                        Zip Code *
+                        Zip / Postal Code *
                       </label>
-                      <input
-                        id="zipCode"
-                        type="text"
-                        placeholder="Zip code"
+                      <PostalCodeAutocomplete
                         value={formData.zipCode}
-                        onChange={(e) => handleInputChange("zipCode", e.target.value)}
-                        className={inputClass("zipCode", !!formData.zipCode)}
+                        onChange={(val) => handleInputChange("zipCode", val)}
+                        onAddressSelect={(addr) => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            streetAddress: addr.street || prev.streetAddress,
+                            city: addr.city || prev.city,
+                            state: addr.state || prev.state,
+                            zipCode: addr.postalCode,
+                            country: addr.country || prev.country,
+                          }));
+                          setErrors((prev) => {
+                            const next = { ...prev };
+                            delete next.streetAddress;
+                            delete next.city;
+                            delete next.state;
+                            delete next.zipCode;
+                            delete next.country;
+                            return next;
+                          });
+                        }}
+                        disabled={isSigningUp}
+                        error={errors.zipCode}
+                        placeholder="Type to search postal code"
+                        inputClassName={inputClass("zipCode", !!formData.zipCode)}
                       />
-                      {errors.zipCode ? <p className="text-sm text-red-600">{errors.zipCode}</p> : null}
                     </div>
                   </div>
                   <div className="flex flex-col gap-2">

@@ -4,6 +4,12 @@ import React from "react";
 import { Calendar, Clock, PoundSterling, CheckCircle, XCircle, MessageSquare, Eye } from 'lucide-react';
 import { format, parseISO } from "date-fns";
 import type { VendorAppointment } from "@/types/appointments";
+import { VendorAppointmentPayoutNotice } from "@/components/appointments/VendorAppointmentPayoutNotice";
+import {
+  canVendorRefundDispute,
+  getVendorPayoutNotice,
+  isVendorPayoutDisputed,
+} from "@/lib/vendorAppointmentPayment";
 
 interface AppointmentCardProps {
   appointment: VendorAppointment;
@@ -13,6 +19,7 @@ interface AppointmentCardProps {
   onReschedule?: (id: number) => void;
   onMarkComplete?: (id: number) => void;
   onMessage?: (id: number) => void;
+  onRefundCustomer?: (id: number) => void;
 }
 
 const STATUS_CONFIG = {
@@ -31,9 +38,14 @@ export function AppointmentCard({
   onReschedule,
   onMarkComplete,
   onMessage,
+  onRefundCustomer,
 }: AppointmentCardProps) {
   const isPending   = appointment.status === 'pending';
   const isAccepted  = appointment.status === 'accepted';
+  const isCompleted = appointment.status === 'completed';
+  const payoutNotice = getVendorPayoutNotice(appointment);
+  const disputed = isVendorPayoutDisputed(appointment);
+  const canRefund = canVendorRefundDispute(appointment);
 
   const status = STATUS_CONFIG[appointment.status];
 
@@ -77,11 +89,16 @@ export function AppointmentCard({
           </div>
         </div>
 
-        {/* Status badge */}
-        <div className="shrink-0 ml-3">
+        {/* Status badges */}
+        <div className="ml-3 flex shrink-0 flex-col items-end gap-1.5">
           <span className={`inline-flex items-center px-3 py-1 rounded-full font-unageo text-xs font-bold ${status.bg} ${status.color}`}>
             {status.label}
           </span>
+          {isCompleted && disputed && (
+            <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 font-unageo text-[10px] font-bold uppercase tracking-wide text-amber-900">
+              Payout on hold
+            </span>
+          )}
         </div>
       </div>
 
@@ -108,11 +125,26 @@ export function AppointmentCard({
         </div>
       </div>
 
+      {isCompleted && payoutNotice && (
+        <VendorAppointmentPayoutNotice appointment={appointment} variant="compact" />
+      )}
+
       {/* Actions */}
       <div
         className="flex flex-wrap gap-2 pt-4 border-t border-accent-10"
         onClick={(e) => e.stopPropagation()}
       >
+        {isCompleted && canRefund && (
+          <>
+            <button
+              type="button"
+              onClick={() => onRefundCustomer?.(appointment.id)}
+              className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-4 py-2 font-unageo text-sm font-bold text-red-700 hover:bg-red-100 transition-all"
+            >
+              Refund customer
+            </button>
+          </>
+        )}
         {isPending && (
           <>
             <button

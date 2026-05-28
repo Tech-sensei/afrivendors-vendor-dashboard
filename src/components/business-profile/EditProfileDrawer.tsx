@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { X, Save } from 'lucide-react';
+import { PostalCodeAutocomplete } from '@/components/ui/PostalCodeAutocomplete';
 type DrawerType = 'description' | 'gallery' | 'location' | 'hours' | null;
 
 interface EditProfileDrawerProps {
@@ -139,25 +140,24 @@ export function EditProfileDrawer({
               </div>
               <div>
                 <label className="block font-unageo text-sm font-semibold text-secondary-000 mb-2 uppercase tracking-widest text-zinc-400">
-                  Zip Code
+                  Zip / Postal Code
                 </label>
-                <input
-                  type="text"
-                  inputMode="text"
-                  autoComplete="postal-code"
-                  maxLength={6}
+                <PostalCodeAutocomplete
                   value={data.zip || ''}
-                  onChange={(e) =>
+                  onChange={(val) => setData({ ...data, zip: val.slice(0, 6) })}
+                  onAddressSelect={(addr) =>
                     setData({
                       ...data,
-                      zip: e.target.value.slice(0, 6),
+                      streetAddress: addr.street || data.streetAddress || '',
+                      city: addr.city || data.city || '',
+                      state: addr.state || data.state || '',
+                      zip: addr.postalCode.slice(0, 6),
                     })
                   }
-                  className="w-full px-5 py-4 rounded-2xl border-2 border-zinc-200 bg-white focus:border-primary-100 focus:ring-0 outline-none font-unageo text-[15px] transition-all"
+                  disabled={isSaving}
+                  placeholder="Type to search postal code"
+                  inputClassName="w-full px-5 py-4 rounded-2xl border-2 border-zinc-200 bg-white focus:border-primary-100 focus:ring-0 outline-none font-unageo text-[15px] transition-all"
                 />
-                <p className="mt-2 font-unageo text-xs text-accent-60">
-                  Maximum 6 characters ({(data.zip || '').length}/6)
-                </p>
               </div>
             </div>
           )}

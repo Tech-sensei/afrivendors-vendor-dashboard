@@ -3,13 +3,21 @@
 import React from 'react';
 import {
   X, Calendar, Clock, MessageSquare, XCircle,
-  CheckCircle, Phone, Mail, CheckCheck, PoundSterling, Loader2,
+  CheckCircle, Phone, Mail, CheckCheck, Loader2, MessageSquareWarning,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
 import { useMobile } from "@/hooks/useMobile";
 import { useVendorAppointmentDetail } from "@/services/useVendorAppointments";
 import type { VendorAppointment } from "@/types/appointments";
+import { VendorAppointmentPayoutNotice } from "@/components/appointments/VendorAppointmentPayoutNotice";
+import {
+  canVendorRefundDispute,
+  getVendorPayoutNotice,
+  isVendorPayoutDisputed,
+  vendorPaymentStatusClass,
+  vendorPaymentStatusLabel,
+} from "@/lib/vendorAppointmentPayment";
 
 interface AppointmentDetailsDrawerProps {
   isOpen: boolean;
@@ -20,6 +28,7 @@ interface AppointmentDetailsDrawerProps {
   onMarkComplete?: () => void;
   onAccept?: () => void;
   onReject?: () => void;
+  onRefundCustomer?: () => void;
 }
 
 const STATUS_CONFIG = {
@@ -42,6 +51,7 @@ export function AppointmentDetailsDrawer({
   onMarkComplete,
   onAccept,
   onReject,
+  onRefundCustomer,
 }: AppointmentDetailsDrawerProps) {
   const isMobile = useMobile();
 
@@ -53,6 +63,9 @@ export function AppointmentDetailsDrawer({
   const isPending   = appt.status === 'pending';
   const isAccepted  = appt.status === 'accepted';
   const isCompleted = appt.status === 'completed';
+  const payoutNotice = getVendorPayoutNotice(appt);
+  const canRefund = appt ? canVendorRefundDispute(appt) : false;
+  const disputed = appt ? isVendorPayoutDisputed(appt) : false;
 
   const status = STATUS_CONFIG[appt.status];
   const primaryService = appt.services[0];
@@ -123,6 +136,10 @@ export function AppointmentDetailsDrawer({
                 <span className={`inline-flex items-center px-4 py-1.5 rounded-full font-unageo text-sm font-bold border ${status.bg} ${status.color} ${status.border}`}>
                   {status.label}
                 </span>
+
+                {isCompleted && payoutNotice && (
+                  <VendorAppointmentPayoutNotice appointment={appt} />
+                )}
 
                 {/* Customer Information */}
                 <section>
@@ -227,11 +244,10 @@ export function AppointmentDetailsDrawer({
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="font-unageo text-sm text-accent-60">Payment Status</span>
-                      <span className={`inline-flex px-2.5 py-1 rounded-md font-unageo text-xs font-bold capitalize
-                        ${appt.paymentStatus === 'paid'   ? 'bg-green-50 text-green-700' :
-                          appt.paymentStatus === 'failed' ? 'bg-red-50 text-red-700' :
-                          'bg-amber-50 text-amber-700'}`}>
-                        {appt.paymentStatus}
+                      <span
+                        className={`inline-flex max-w-[58%] px-2.5 py-1 rounded-md font-unageo text-xs font-bold text-right ${vendorPaymentStatusClass(appt)}`}
+                      >
+                        {vendorPaymentStatusLabel(appt)}
                       </span>
                     </div>
                   </div>
@@ -274,6 +290,24 @@ export function AppointmentDetailsDrawer({
                       ...(appt.status === 'completed'
                         ? [{ label: 'Service Completed', date: format(parseISO(appt.date), 'MMM d, yyyy'), done: true }]
                         : []),
+                      ...(appt.status === 'completed' && appt.paymentStatus === 'disputed'
+                        ? [{
+                            label: 'Customer opened a dispute',
+                            date: (() => {
+                              if (!appt.dispute?.createdAt) return 'Payout on hold';
+                              try {
+                                return format(parseISO(appt.dispute.createdAt), 'MMM d, yyyy');
+                              } catch {
+                                return appt.dispute.createdAt;
+                              }
+                            })(),
+                            done: false,
+                            current: appt.dispute?.status !== 'resolved',
+                          }]
+                        : []),
+                      ...(appt.status === 'completed' && appt.paymentStatus === 'released'
+                        ? [{ label: 'Payout sent to you', date: format(parseISO(appt.updatedAt), 'MMM d, yyyy'), done: true }]
+                        : []),
                     ].map((item, index, arr) => (
                       <div key={index} className="flex gap-4 relative">
                         <div className="flex flex-col items-center w-6">
@@ -304,6 +338,26 @@ export function AppointmentDetailsDrawer({
 
             {/* Footer Actions */}
             <div className="p-6 border-t border-accent-10/50 bg-secondary-800 space-y-3">
+              {isCompleted && canRefund && (
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={onRefundCustomer}
+                    className="col-span-2 flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 py-3.5 font-unageo text-sm font-bold text-white shadow-sm transition-all hover:bg-red-700 active:scale-95"
+                  >
+                    Refund customer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onMessage}
+                    className="col-span-2 flex w-full items-center justify-center gap-2 rounded-xl border border-accent-20 bg-white py-3.5 font-unageo text-sm font-bold text-secondary-000 transition-all hover:bg-accent-10 active:scale-95"
+                  >
+                    <MessageSquare size={18} />
+                    Message customer
+                  </button>
+                </div>
+              )}
+
               {isPending && (
                 <>
                   <button

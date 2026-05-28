@@ -12,6 +12,7 @@ import {
   User,
   Star,
   BarChart3,
+  CreditCard,
   Settings,
   HelpCircle,
   LogOut,
@@ -58,6 +59,7 @@ export function Sidebar({ activePath = '/', onLogout, isMobileOpen = false, onMo
     { path: '/business-profile', label: 'Business Profile', icon: User },
     { path: '/reviews', label: 'Reviews', icon: Star },
     { path: '/analytics', label: 'Analytics', icon: BarChart3 },
+    { path: '/subscription', label: 'Subscription', icon: CreditCard },
     { path: '/settings', label: 'Settings', icon: Settings },
     { path: '/help-support', label: 'Help & Support', icon: HelpCircle },
   ];

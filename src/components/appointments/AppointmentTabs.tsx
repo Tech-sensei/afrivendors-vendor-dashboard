@@ -13,10 +13,10 @@ interface AppointmentTabsProps {
 
 export function AppointmentTabs({ activeTab, setActiveTab, counts }: AppointmentTabsProps) {
   const tabs = [
+    { id: 'pending' as AppointmentTabType, label: 'Pending Approvals', icon: Clock },
     { id: 'upcoming' as AppointmentTabType, label: 'Upcoming', icon: Calendar },
-    { id: 'pending' as AppointmentTabType, label: 'Pending Approval', icon: Clock },
     { id: 'past' as AppointmentTabType, label: 'Past', icon: CheckCircle },
-    { id: 'cancelled' as AppointmentTabType, label: 'Cancelled', icon: XCircle }
+    { id: 'cancelled' as AppointmentTabType, label: 'Cancelled', icon: XCircle },
   ];
 
   return (

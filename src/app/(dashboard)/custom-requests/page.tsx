@@ -238,7 +238,7 @@ export default function CustomRequestsPage() {
           onChange={(e) => setSearch(e.target.value)}
           className="h-11 w-full rounded-[18px] border border-accent-20 bg-white pl-11 pr-4 text-sm outline-none focus:border-primary-100"
         />
-      </div>
+          </div>
 
       {filteredRequests.length > 0 ? (
         <div className="space-y-4">

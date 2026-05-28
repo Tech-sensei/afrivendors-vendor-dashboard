@@ -1,6 +1,7 @@
 "use client";
 
-import { X, Calendar, Clock, MapPin, PoundSterling, User } from "lucide-react";
+import { X } from "lucide-react";
+import { VendorCustomRequestClientCard } from "./VendorCustomRequestClientCard";
 import { motion, AnimatePresence } from "motion/react";
 import { useMobile } from "@/hooks/useMobile";
 import type { VendorCustomRequest } from "@/types/vendorCustomRequests";
@@ -34,10 +35,6 @@ export function VendorCustomRequestDetailDrawer({
 }: Props) {
   const isMobile = useMobile();
   if (!request) return null;
-
-  const dateLabel = request.flexibleDates
-    ? `${request.flexibleDates.start} to ${request.flexibleDates.end}`
-    : request.preferredDate;
 
   return (
     <AnimatePresence>
@@ -100,53 +97,7 @@ export function VendorCustomRequestDetailDrawer({
                 </div>
               )}
 
-              <section>
-                <h3 className="mb-3 font-unbounded text-sm font-semibold text-secondary-000">
-                  Client & request
-                </h3>
-                <div className="space-y-2 rounded-xl border border-accent-20 bg-secondary-800 p-4 text-sm">
-                  <p className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-accent-60" />
-                    {request.customerName}
-                  </p>
-                  <p>
-                    <span className="text-accent-80">Category · </span>
-                    {request.category}
-                  </p>
-                  <p className="leading-relaxed text-secondary-000">
-                    {request.description}
-                  </p>
-                </div>
-              </section>
-
-              <section>
-                <h3 className="mb-3 font-unbounded text-sm font-semibold text-secondary-000">
-                  Schedule & location
-                </h3>
-                <div className="grid gap-3 text-sm">
-                  <p className="flex items-center gap-2 text-secondary-000">
-                    <Calendar className="h-4 w-4 text-accent-60" />
-                    {dateLabel}
-                  </p>
-                  <p className="flex items-center gap-2 text-secondary-000">
-                    <Clock className="h-4 w-4 text-accent-60" />
-                    {request.preferredTime}
-                    {request.urgency === "priority" && (
-                      <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-900">
-                        Priority
-                      </span>
-                    )}
-                  </p>
-                  <p className="flex items-center gap-2 text-secondary-000">
-                    <MapPin className="h-4 w-4 text-accent-60" />
-                    {request.location}
-                  </p>
-                  <p className="flex items-center gap-2 text-secondary-000">
-                    <PoundSterling className="h-4 w-4 text-accent-60" />
-                    Client budget {formatMoney(request.budget)}
-                  </p>
-                </div>
-              </section>
+              <VendorCustomRequestClientCard request={request} />
 
               {request.myQuote && (
                 <section>

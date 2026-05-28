@@ -16,7 +16,7 @@ export function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
         <p key={index} className="font-unageo text-[13px] my-1" style={{ color: entry.color }}>
           {entry.name}:{' '}
           {entry.name.toLowerCase().includes('earnings') || entry.name.toLowerCase().includes('revenue')
-            ? '$'
+            ? '£'
             : ''}
           {entry.value.toLocaleString()}
         </p>

@@ -50,6 +50,11 @@ const pageMetadata: Record<string, { title: string; description: string }> = {
     title: 'Analytics',
     description: 'Track your business performance and insights',
   },
+  '/subscription': {
+    title: 'Subscription',
+    description:
+      'Manage your listing visibility, free trial, and billing cycle',
+  },
   '/settings': {
     title: 'Settings',
     description: 'Configure your account and application preferences',

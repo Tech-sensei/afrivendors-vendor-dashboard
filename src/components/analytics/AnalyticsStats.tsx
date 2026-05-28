@@ -12,6 +12,7 @@ export function AnalyticsStats({ stats }: AnalyticsStatsProps) {
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
       {stats.map((stat, index) => {
         const Icon = stat.icon;
+        const hasChange = stat.change != null && stat.trend != null;
         const isUp = stat.trend === 'up';
 
         return (
@@ -27,24 +28,26 @@ export function AnalyticsStats({ stats }: AnalyticsStatsProps) {
                 <Icon className="w-[22px] h-[22px]" style={{ color: stat.color }} />
               </div>
 
-              <div
-                className={`flex items-center gap-1 px-2 py-1 rounded-md ${
-                  isUp ? 'bg-emerald-50' : 'bg-red-50'
-                }`}
-              >
-                {isUp ? (
-                  <ArrowUp className="w-3.5 h-3.5 text-emerald-500" />
-                ) : (
-                  <ArrowDown className="w-3.5 h-3.5 text-red-500" />
-                )}
-                <span
-                  className={`font-unageo text-xs font-semibold ${
-                    isUp ? 'text-emerald-500' : 'text-red-500'
+              {hasChange && (
+                <div
+                  className={`flex items-center gap-1 px-2 py-1 rounded-md ${
+                    isUp ? 'bg-emerald-50' : 'bg-red-50'
                   }`}
                 >
-                  {stat.change}
-                </span>
-              </div>
+                  {isUp ? (
+                    <ArrowUp className="w-3.5 h-3.5 text-emerald-500" />
+                  ) : (
+                    <ArrowDown className="w-3.5 h-3.5 text-red-500" />
+                  )}
+                  <span
+                    className={`font-unageo text-xs font-semibold ${
+                      isUp ? 'text-emerald-500' : 'text-red-500'
+                    }`}
+                  >
+                    {stat.change}
+                  </span>
+                </div>
+              )}
             </div>
 
             <h3 className="font-unbounded text-[28px] font-bold text-secondary-000 mb-1">
