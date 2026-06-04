@@ -170,7 +170,7 @@ export function vendorPaymentStatusLabel(
   }
   switch (appointment.paymentStatus) {
     case "paid":
-      return "Awaiting confirmation";
+      return "Paid";
     case "released":
       return "Paid to you";
     case "disputed":
@@ -198,7 +198,7 @@ export function vendorPaymentStatusClass(
     case "refunded":
       return "bg-red-50 text-red-700";
     case "paid":
-      return "bg-blue-50 text-blue-700";
+      return "bg-green-50 text-green-700";
     case "failed":
       return "bg-red-50 text-red-700";
     default:

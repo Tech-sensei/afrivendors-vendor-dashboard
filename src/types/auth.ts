@@ -131,23 +131,19 @@ export interface SignUpPayload {
   firstName: string;
   lastName: string;
   email: string;
+  /** ISO 3166-1 alpha-2, e.g. GB */
   country: string;
   password: string;
   phoneNumber: AuthPhoneNumber;
   accountType: "vendor";
-  /** Client / extended registration metadata (API may accept or ignore fields). */
-  vendorAccountKind?: VendorRegisterAccountKind;
-  /** Selected category from `GET /categories` (individual vendors). */
-  serviceCategoryId?: number;
-  serviceCategory?: string;
+  displayName: string;
+  vendorAccountKind: VendorRegisterAccountKind;
+  categoryId: number;
   businessName?: string;
-  /** Selected category from `GET /categories` (business vendors). */
-  businessCategoryId?: number;
-  businessCategory?: string;
-  streetAddress?: string;
-  city?: string;
-  state?: string;
-  zipCode?: string;
+  streetAddress: string;
+  city: string;
+  state: string;
+  zipCode: string;
 }
 
 export interface ForgotPasswordPayload {

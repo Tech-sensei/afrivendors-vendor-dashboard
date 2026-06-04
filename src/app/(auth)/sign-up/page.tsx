@@ -14,15 +14,9 @@ import type { VendorRegisterAccountKind } from "@/types/auth";
 import { vendorSignUpFormSchema } from "@/lib/validations/authValidationSchema";
 import { zodFieldErrors } from "@/lib/validations/zodHelpers";
 import { PostalCodeAutocomplete } from "@/components/ui/PostalCodeAutocomplete";
+import { UK_PHONE_CODE, normalizeUkPhoneForApi, sanitizeUkPhoneInput } from "@/lib/ukPhone";
 
-const countries = [
-  { code: "+1", name: "United States", flag: "🇺🇸" },
-  { code: "+44", name: "United Kingdom", flag: "🇬🇧" },
-  { code: "+234", name: "Nigeria", flag: "🇳🇬" },
-  { code: "+27", name: "South Africa", flag: "🇿🇦" },
-  { code: "+254", name: "Kenya", flag: "🇰🇪" },
-  { code: "+233", name: "Ghana", flag: "🇬🇭" },
-];
+const DEFAULT_COUNTRY = "GB";
 
 type FormErrors = Record<string, string>;
 
@@ -39,16 +33,16 @@ export default function SignUpPage() {
     email: "",
     password: "",
     confirmPassword: "",
-    phoneCode: "+234",
+    phoneCode: UK_PHONE_CODE,
     phoneNumber: "",
-    serviceCategoryId: "",
+    displayName: "",
+    categoryId: "",
     businessName: "",
-    businessCategoryId: "",
     streetAddress: "",
     city: "",
     state: "",
     zipCode: "",
-    country: "",
+    country: DEFAULT_COUNTRY,
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -87,31 +81,28 @@ export default function SignUpPage() {
   const handleContinue = async () => {
     if (!validateForm()) return;
     try {
-      const serviceCat = categories.find((c) => c.id === Number(formData.serviceCategoryId));
-      const businessCat = categories.find((c) => c.id === Number(formData.businessCategoryId));
+      const categoryId = Number(formData.categoryId);
       const payload = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        country: formData.country,
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        email: formData.email.trim(),
+        country: DEFAULT_COUNTRY,
         password: formData.password,
-        phoneNumber: { code: formData.phoneCode, number: formData.phoneNumber },
+        phoneNumber: {
+          code: UK_PHONE_CODE,
+          number: normalizeUkPhoneForApi(formData.phoneNumber),
+        },
         accountType: "vendor" as const,
+        displayName: formData.displayName.trim(),
         vendorAccountKind: accountKind,
-        streetAddress: formData.streetAddress,
-        city: formData.city,
-        state: formData.state,
-        zipCode: formData.zipCode,
-        ...(accountKind === "individual"
-          ? {
-              serviceCategoryId: Number(formData.serviceCategoryId),
-              ...(serviceCat?.name ? { serviceCategory: serviceCat.name } : {}),
-            }
-          : {
-              businessName: formData.businessName,
-              businessCategoryId: Number(formData.businessCategoryId),
-              ...(businessCat?.name ? { businessCategory: businessCat.name } : {}),
-            }),
+        categoryId,
+        streetAddress: formData.streetAddress.trim(),
+        city: formData.city.trim(),
+        state: formData.state.trim(),
+        zipCode: formData.zipCode.trim(),
+        ...(accountKind === "business" && formData.businessName.trim()
+          ? { businessName: formData.businessName.trim() }
+          : {}),
       };
       await signUpAsync(payload);
       router.push(`/sign-up/celebration?email=${encodeURIComponent(formData.email)}`);
@@ -127,14 +118,14 @@ export default function SignUpPage() {
     formData.password &&
     formData.confirmPassword &&
     formData.phoneNumber &&
+    formData.displayName &&
+    formData.categoryId &&
     formData.streetAddress &&
     formData.city &&
     formData.state &&
     formData.zipCode &&
     formData.country &&
-    (accountKind === "individual"
-      ? formData.serviceCategoryId
-      : formData.businessName && formData.businessCategoryId) &&
+    (accountKind === "individual" || formData.businessName) &&
     !categoriesLoading &&
     categories.length > 0;
 
@@ -174,10 +165,7 @@ export default function SignUpPage() {
             <div className="mb-8 flex w-full rounded-full bg-secondary-700 p-1">
               <button
                 type="button"
-                onClick={() => {
-                  setAccountKind("individual");
-                  setFormData((p) => ({ ...p, businessCategoryId: "" }));
-                }}
+                onClick={() => setAccountKind("individual")}
                 className={`flex-1 rounded-full py-3.5 text-center text-sm font-semibold transition-colors ${
                   accountKind === "individual"
                     ? "bg-secondary-000 text-white"
@@ -188,10 +176,7 @@ export default function SignUpPage() {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setAccountKind("business");
-                  setFormData((p) => ({ ...p, serviceCategoryId: "" }));
-                }}
+                onClick={() => setAccountKind("business")}
                 className={`flex-1 rounded-full py-3.5 text-center text-sm font-semibold transition-colors ${
                   accountKind === "business" ? "bg-secondary-000 text-white" : "bg-transparent text-secondary-000"
                 }`}
@@ -245,54 +230,71 @@ export default function SignUpPage() {
                 </div>
               </div>
 
+              <div className="flex flex-col gap-2">
+                <label htmlFor="displayName" className="text-base font-normal leading-6 text-secondary-000">
+                  Display name *
+                </label>
+                <input
+                  id="displayName"
+                  type="text"
+                  placeholder="Public name on Afrivendors"
+                  value={formData.displayName}
+                  onChange={(e) => handleInputChange("displayName", e.target.value)}
+                  className={inputClass("displayName", !!formData.displayName)}
+                />
+                <p className="text-xs text-accent-80">
+                  This is how clients will see you on the marketplace.
+                </p>
+                {errors.displayName ? <p className="text-sm text-red-600">{errors.displayName}</p> : null}
+              </div>
+
               {accountKind === "business" ? (
-                <>
-                  <div className="flex flex-col gap-2">
-                    <label htmlFor="businessName" className="text-base font-normal leading-6 text-secondary-000">
-                      Business Name *
-                    </label>
-                    <input
-                      id="businessName"
-                      type="text"
-                      placeholder="Your business name"
-                      value={formData.businessName}
-                      onChange={(e) => handleInputChange("businessName", e.target.value)}
-                      className={inputClass("businessName", !!formData.businessName)}
-                    />
-                    {errors.businessName ? <p className="text-sm text-red-600">{errors.businessName}</p> : null}
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="text-base font-normal leading-6 text-secondary-000">Business Category *</label>
-                    <Select
-                      value={formData.businessCategoryId}
-                      onValueChange={(value) => handleInputChange("businessCategoryId", value)}
-                      disabled={categoriesLoading || categories.length === 0}
-                    >
-                      <SelectTrigger
-                        className={`h-14 w-full rounded-lg border px-4 py-7 text-base leading-6 text-secondary-000 ${
-                          errors.businessCategoryId ? "border-red-600" : "border-secondary-200"
-                        } ${formData.businessCategoryId ? "bg-secondary-600" : "bg-secondary-800"}`}
-                      >
-                        <SelectValue
-                          placeholder={
-                            categoriesLoading ? "Loading categories…" : categories.length ? "Select category" : "No categories"
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((c) => (
-                          <SelectItem key={c.id} value={String(c.id)}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {errors.businessCategoryId ? (
-                      <p className="text-sm text-red-600">{errors.businessCategoryId}</p>
-                    ) : null}
-                  </div>
-                </>
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="businessName" className="text-base font-normal leading-6 text-secondary-000">
+                    Business Name *
+                  </label>
+                  <input
+                    id="businessName"
+                    type="text"
+                    placeholder="Your registered business name"
+                    value={formData.businessName}
+                    onChange={(e) => handleInputChange("businessName", e.target.value)}
+                    className={inputClass("businessName", !!formData.businessName)}
+                  />
+                  {errors.businessName ? <p className="text-sm text-red-600">{errors.businessName}</p> : null}
+                </div>
               ) : null}
+
+              <div className="flex flex-col gap-2">
+                <label className="text-base font-normal leading-6 text-secondary-000">Category *</label>
+                <Select
+                  value={formData.categoryId}
+                  onValueChange={(value) => handleInputChange("categoryId", value)}
+                  disabled={categoriesLoading || categories.length === 0}
+                >
+                  <SelectTrigger
+                    className={`h-14 w-full rounded-lg border px-4 py-7 text-base leading-6 text-secondary-000 ${
+                      errors.categoryId ? "border-red-600" : "border-secondary-200"
+                    } ${formData.categoryId ? "bg-secondary-600" : "bg-secondary-800"}`}
+                  >
+                    <SelectValue
+                      placeholder={
+                        categoriesLoading ? "Loading categories…" : categories.length ? "Select category" : "No categories"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((c) => (
+                      <SelectItem key={c.id} value={String(c.id)}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.categoryId ? (
+                  <p className="text-sm text-red-600">{errors.categoryId}</p>
+                ) : null}
+              </div>
 
               <div className="flex flex-col gap-2">
                 <label htmlFor="email" className="text-base font-normal leading-6 text-secondary-000">
@@ -312,61 +314,27 @@ export default function SignUpPage() {
               <div className="flex flex-col gap-2">
                 <span className="text-base font-normal leading-6 text-secondary-000">Phone Number *</span>
                 <div className="flex gap-2.5">
-                  <Select value={formData.phoneCode} onValueChange={(value) => handleInputChange("phoneCode", value)}>
-                    <SelectTrigger className="h-14 w-30 rounded-lg border border-secondary-200 bg-white px-3 py-7 text-base leading-6 text-secondary-000">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {countries.map((c) => (
-                        <SelectItem key={c.code} value={c.code}>
-                          {c.flag} {c.code}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex h-14 w-30 shrink-0 items-center justify-center rounded-lg border border-secondary-200 bg-white px-3 text-base leading-6 text-secondary-000">
+                    🇬🇧 {UK_PHONE_CODE}
+                  </div>
                   <input
                     type="tel"
-                    placeholder="Phone number"
+                    inputMode="numeric"
+                    autoComplete="tel-national"
+                    maxLength={11}
+                    placeholder="e.g. 7123456789"
                     value={formData.phoneNumber}
-                    onChange={(e) => handleInputChange("phoneNumber", e.target.value.replace(/\D/g, ""))}
+                    onChange={(e) =>
+                      handleInputChange("phoneNumber", sanitizeUkPhoneInput(e.target.value))
+                    }
                     className={`flex-1 ${inputClass("phoneNumber", !!formData.phoneNumber)}`}
                   />
                 </div>
+                <p className="text-xs text-accent-80">
+                  UK numbers only — 10 digits, or 11 if you include the leading 0.
+                </p>
                 {errors.phoneNumber ? <p className="text-sm text-red-600">{errors.phoneNumber}</p> : null}
               </div>
-
-              {accountKind === "individual" ? (
-                <div className="flex flex-col gap-2">
-                  <label className="text-base font-normal leading-6 text-secondary-000">Service Category *</label>
-                  <Select
-                    value={formData.serviceCategoryId}
-                    onValueChange={(value) => handleInputChange("serviceCategoryId", value)}
-                    disabled={categoriesLoading || categories.length === 0}
-                  >
-                    <SelectTrigger
-                      className={`h-14 w-full rounded-lg border px-4 py-7 text-base leading-6 text-secondary-000 ${
-                        errors.serviceCategoryId ? "border-red-600" : "border-secondary-200"
-                      } ${formData.serviceCategoryId ? "bg-secondary-600" : "bg-secondary-800"}`}
-                    >
-                      <SelectValue
-                        placeholder={
-                          categoriesLoading ? "Loading categories…" : categories.length ? "Select service category" : "No categories"
-                        }
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((c) => (
-                        <SelectItem key={c.id} value={String(c.id)}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.serviceCategoryId ? (
-                    <p className="text-sm text-red-600">{errors.serviceCategoryId}</p>
-                  ) : null}
-                </div>
-              ) : null}
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
@@ -420,8 +388,44 @@ export default function SignUpPage() {
               </div>
 
               <div className="mt-2 border-t border-border pt-4">
-                <h3 className="mb-4 font-unbounded text-base font-semibold text-secondary-000">Location</h3>
+                <h3 className="mb-1 font-unbounded text-base font-semibold text-secondary-000">Location</h3>
+                <p className="mb-4 text-sm text-accent-80">
+                  Start with your post code — we&apos;ll fill in the rest.
+                </p>
                 <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor="zipCode" className="text-base font-normal leading-6 text-secondary-000">
+                      Post code *
+                    </label>
+                    <PostalCodeAutocomplete
+                      value={formData.zipCode}
+                      onChange={(val) => handleInputChange("zipCode", val)}
+                      onAddressSelect={(addr) => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          streetAddress: addr.street || prev.streetAddress,
+                          city: addr.city || prev.city,
+                          state: addr.state || prev.state,
+                          zipCode: addr.postalCode,
+                          country: DEFAULT_COUNTRY,
+                        }));
+                        setErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.streetAddress;
+                          delete next.city;
+                          delete next.state;
+                          delete next.zipCode;
+                          delete next.country;
+                          return next;
+                        });
+                      }}
+                      disabled={isSigningUp}
+                      error={errors.zipCode}
+                      placeholder="e.g. M32 0JG"
+                      inputClassName={inputClass("zipCode", !!formData.zipCode)}
+                    />
+                  </div>
+
                   <div className="flex flex-col gap-2">
                     <label htmlFor="streetAddress" className="text-base font-normal leading-6 text-secondary-000">
                       Street Address *
@@ -436,7 +440,8 @@ export default function SignUpPage() {
                     />
                     {errors.streetAddress ? <p className="text-sm text-red-600">{errors.streetAddress}</p> : null}
                   </div>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="flex flex-col gap-2">
                       <label htmlFor="city" className="text-base font-normal leading-6 text-secondary-000">
                         City *
@@ -453,70 +458,29 @@ export default function SignUpPage() {
                     </div>
                     <div className="flex flex-col gap-2">
                       <label htmlFor="state" className="text-base font-normal leading-6 text-secondary-000">
-                        State *
+                        County / State *
                       </label>
                       <input
                         id="state"
                         type="text"
-                        placeholder="State"
+                        placeholder="County or state"
                         value={formData.state}
                         onChange={(e) => handleInputChange("state", e.target.value)}
                         className={inputClass("state", !!formData.state)}
                       />
                       {errors.state ? <p className="text-sm text-red-600">{errors.state}</p> : null}
                     </div>
-                    <div className="flex flex-col gap-2">
-                      <label htmlFor="zipCode" className="text-base font-normal leading-6 text-secondary-000">
-                        Zip / Postal Code *
-                      </label>
-                      <PostalCodeAutocomplete
-                        value={formData.zipCode}
-                        onChange={(val) => handleInputChange("zipCode", val)}
-                        onAddressSelect={(addr) => {
-                          setFormData((prev) => ({
-                            ...prev,
-                            streetAddress: addr.street || prev.streetAddress,
-                            city: addr.city || prev.city,
-                            state: addr.state || prev.state,
-                            zipCode: addr.postalCode,
-                            country: addr.country || prev.country,
-                          }));
-                          setErrors((prev) => {
-                            const next = { ...prev };
-                            delete next.streetAddress;
-                            delete next.city;
-                            delete next.state;
-                            delete next.zipCode;
-                            delete next.country;
-                            return next;
-                          });
-                        }}
-                        disabled={isSigningUp}
-                        error={errors.zipCode}
-                        placeholder="Type to search postal code"
-                        inputClassName={inputClass("zipCode", !!formData.zipCode)}
-                      />
-                    </div>
                   </div>
+
                   <div className="flex flex-col gap-2">
                     <label className="text-base font-normal leading-6 text-secondary-000">Country *</label>
-                    <Select value={formData.country} onValueChange={(value) => handleInputChange("country", value)}>
-                      <SelectTrigger
-                        className={`h-14 w-full rounded-lg border px-4 py-7 text-base leading-6 text-secondary-000 ${
-                          errors.country ? "border-red-600" : "border-secondary-200"
-                        } ${formData.country ? "bg-secondary-600" : "bg-secondary-800"}`}
-                      >
-                        <SelectValue placeholder="Select country" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {countries.map((c) => (
-                          <SelectItem key={c.name} value={c.name}>
-                            {c.flag} {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {errors.country ? <p className="text-sm text-red-600">{errors.country}</p> : null}
+                    <div
+                      aria-readonly="true"
+                      className="flex h-14 w-full items-center rounded-lg border border-secondary-200 bg-secondary-600 px-4 text-base leading-6 text-secondary-000 opacity-80"
+                    >
+                      🇬🇧 United Kingdom
+                    </div>
+                    <p className="text-xs text-accent-80">Vendor registration is currently available in the UK only.</p>
                   </div>
                 </div>
               </div>

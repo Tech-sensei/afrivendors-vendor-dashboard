@@ -125,10 +125,7 @@ export function useResolveDisputeRefundCustomer() {
       appointmentId: number;
       resolution: string;
     }) => {
-      const { data } = await http.post(
-        `/vendor/appointments/${appointmentId}/dispute/resolve/refund`,
-        { resolution }
-      );
+      const { data } = await http.patch(`/vendor/appointments/${appointmentId}/dispute/resolve/refund-user`, { resolution });
       return data;
     },
     onSuccess: (_, { appointmentId }) => {

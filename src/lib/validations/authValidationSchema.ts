@@ -1,11 +1,22 @@
 import { z } from "zod";
 import type { VendorRegisterAccountKind } from "@/types/auth";
+import { isValidUkPhoneNumber, UK_PHONE_CODE } from "@/lib/ukPhone";
 
 const phoneNumberDigits = z
   .string()
   .trim()
   .min(1, "Phone number is required")
   .regex(/^\d+$/, "Phone number must contain only digits");
+
+const ukPhoneNumber = z
+  .string()
+  .trim()
+  .min(1, "Phone number is required")
+  .regex(/^\d+$/, "Phone number must contain only digits")
+  .max(11, "UK phone number is too long")
+  .refine(isValidUkPhoneNumber, {
+    message: "Enter a valid UK phone number (10 digits, or 11 starting with 0)",
+  });
 
 export const signInSchema = z.object({
   email: z
@@ -113,11 +124,15 @@ export const vendorSignUpFormSchema = z
       .min(1, "Password is required")
       .min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string().min(1, "Please confirm your password"),
-    phoneCode: z.string().min(1, "Phone code is required"),
-    phoneNumber: phoneNumberDigits,
-    serviceCategoryId: z.string(),
+    phoneCode: z.literal(UK_PHONE_CODE),
+    phoneNumber: ukPhoneNumber,
+    displayName: z
+      .string()
+      .trim()
+      .min(1, "Display name is required")
+      .max(80, "Display name is too long"),
+    categoryId: z.string(),
     businessName: z.string(),
-    businessCategoryId: z.string(),
     streetAddress: z
       .string()
       .trim()
@@ -128,8 +143,8 @@ export const vendorSignUpFormSchema = z
     zipCode: z
       .string()
       .trim()
-      .min(1, "Zip code is required")
-      .max(6, "Zip code must be at most 6 characters"),
+      .min(1, "Post code is required")
+      .max(8, "Post code is too long"),
     country: z.string().trim().min(1, "Country is required"),
     agreedToTerms: z.boolean(),
   })
@@ -142,29 +157,20 @@ export const vendorSignUpFormSchema = z
     path: ["agreedToTerms"],
   })
   .superRefine((data, ctx) => {
-    if (data.accountKind === "individual") {
-      if (!data.serviceCategoryId.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Service category is required",
-          path: ["serviceCategoryId"],
-        });
-      }
-    } else {
-      if (!data.businessName.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Business name is required",
-          path: ["businessName"],
-        });
-      }
-      if (!data.businessCategoryId.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Business category is required",
-          path: ["businessCategoryId"],
-        });
-      }
+    const categoryId = Number(data.categoryId);
+    if (!data.categoryId.trim() || !Number.isInteger(categoryId) || categoryId < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Category is required",
+        path: ["categoryId"],
+      });
+    }
+    if (data.accountKind === "business" && !data.businessName.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Business name is required",
+        path: ["businessName"],
+      });
     }
   });
 
