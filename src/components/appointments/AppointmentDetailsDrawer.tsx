@@ -12,12 +12,14 @@ import { useVendorAppointmentDetail } from "@/services/useVendorAppointments";
 import type { VendorAppointment } from "@/types/appointments";
 import { VendorAppointmentPayoutNotice } from "@/components/appointments/VendorAppointmentPayoutNotice";
 import {
+  canVendorEscalateDispute,
   canVendorRefundDispute,
   getVendorPayoutNotice,
   isVendorPayoutDisputed,
   vendorPaymentStatusClass,
   vendorPaymentStatusLabel,
 } from "@/lib/vendorAppointmentPayment";
+import { isVendorDisputeEscalated } from "@/types/appointments";
 
 interface AppointmentDetailsDrawerProps {
   isOpen: boolean;
@@ -29,6 +31,7 @@ interface AppointmentDetailsDrawerProps {
   onAccept?: () => void;
   onReject?: () => void;
   onRefundCustomer?: () => void;
+  onEscalateDispute?: () => void;
 }
 
 const STATUS_CONFIG = {
@@ -52,6 +55,7 @@ export function AppointmentDetailsDrawer({
   onAccept,
   onReject,
   onRefundCustomer,
+  onEscalateDispute,
 }: AppointmentDetailsDrawerProps) {
   const isMobile = useMobile();
 
@@ -65,7 +69,9 @@ export function AppointmentDetailsDrawer({
   const isCompleted = appt.status === 'completed';
   const payoutNotice = getVendorPayoutNotice(appt);
   const canRefund = appt ? canVendorRefundDispute(appt) : false;
+  const canEscalate = appt ? canVendorEscalateDispute(appt) : false;
   const disputed = appt ? isVendorPayoutDisputed(appt) : false;
+  const disputeEscalated = appt ? isVendorDisputeEscalated(appt.dispute) : false;
 
   const status = STATUS_CONFIG[appt.status];
   const primaryService = appt.services[0];
@@ -290,9 +296,9 @@ export function AppointmentDetailsDrawer({
                       ...(appt.status === 'completed'
                         ? [{ label: 'Service Completed', date: format(parseISO(appt.date), 'MMM d, yyyy'), done: true }]
                         : []),
-                      ...(appt.status === 'completed' && appt.paymentStatus === 'disputed'
+                      ...(appt.status === 'completed' && disputed
                         ? [{
-                            label: 'Customer opened a dispute',
+                            label: disputeEscalated ? 'Escalated to Afrivendors' : 'Customer opened a dispute',
                             date: (() => {
                               if (!appt.dispute?.createdAt) return 'Payout on hold';
                               try {
@@ -301,8 +307,8 @@ export function AppointmentDetailsDrawer({
                                 return appt.dispute.createdAt;
                               }
                             })(),
-                            done: false,
-                            current: appt.dispute?.status !== 'resolved',
+                            done: disputeEscalated,
+                            current: !disputeEscalated && appt.dispute?.status !== 'resolved',
                           }]
                         : []),
                       ...(appt.status === 'completed' && appt.paymentStatus === 'released'
@@ -338,26 +344,40 @@ export function AppointmentDetailsDrawer({
 
             {/* Footer Actions */}
             <div className="p-6 border-t border-accent-10/50 bg-secondary-800 space-y-3">
-              {isCompleted && canRefund && (
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={onRefundCustomer}
-                    className="col-span-2 flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 py-3.5 font-unageo text-sm font-bold text-white shadow-sm transition-all hover:bg-red-700 active:scale-95"
-                  >
-                    Refund customer
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onMessage}
-                    className="col-span-2 flex w-full items-center justify-center gap-2 rounded-xl border border-accent-20 bg-white py-3.5 font-unageo text-sm font-bold text-secondary-000 transition-all hover:bg-accent-10 active:scale-95"
-                  >
-                    <MessageSquare size={18} />
-                    Message customer
-                  </button>
-                </div>
-              )}
-
+              {isCompleted && disputed ? (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    {canRefund && (
+                      <button
+                        type="button"
+                        onClick={onRefundCustomer}
+                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 py-3.5 font-unageo text-sm font-bold text-white shadow-sm transition-all hover:bg-red-700 active:scale-95"
+                      >
+                        Refund customer
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={onMessage}
+                      className={`flex w-full items-center justify-center gap-2 rounded-xl border border-accent-20 bg-white py-3.5 font-unageo text-sm font-bold text-secondary-000 transition-all hover:bg-accent-10 active:scale-95 ${canRefund ? "" : "col-span-2"}`}
+                    >
+                      <MessageSquare size={18} />
+                      Message customer
+                    </button>
+                  </div>
+                  {canEscalate && (
+                    <button
+                      type="button"
+                      onClick={onEscalateDispute}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 py-3.5 font-unageo text-sm font-bold text-amber-950 transition-all hover:bg-amber-100 active:scale-95"
+                    >
+                      <MessageSquareWarning size={18} />
+                      Escalate to Afrivendors
+                    </button>
+                  )}
+                </>
+              ) : (
+                <>
               {isPending && (
                 <>
                   <button
@@ -403,6 +423,8 @@ export function AppointmentDetailsDrawer({
                   <XCircle size={16} />
                   Cancel Appointment
                 </button>
+              )}
+                </>
               )}
             </div>
           </motion.div>

@@ -109,11 +109,6 @@ export const useVendorAppointmentDetail = (id: number | undefined, enabled: bool
     staleTime: 30_000,
   });
 
-export type RespondToAppointmentDisputePayload = {
-  appointmentId: number;
-  message: string;
-};
-
 export function useResolveDisputeRefundCustomer() {
   const queryClient = useQueryClient();
 
@@ -139,6 +134,35 @@ export function useResolveDisputeRefundCustomer() {
       toast.error(
         (error as { response?: { data?: { message?: string } } })?.response?.data
           ?.message ?? "Could not process refund. Please try again."
+      );
+    },
+  });
+}
+
+export function useEscalateVendorAppointmentDispute() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (appointmentId: number) => {
+      const { data } = await http.patch(
+        `/vendor/appointments/${appointmentId}/dispute/escalate`
+      );
+      return data;
+    },
+    onSuccess: (_, appointmentId) => {
+      toast.success("Escalated to Afrivendors. Our team will review and update you.");
+      invalidateVendorAppointmentLists(queryClient);
+      queryClient.invalidateQueries({
+        queryKey: ["vendor-appointment-detail", appointmentId],
+      });
+    },
+    onError: (error: unknown) => {
+      toast.error(
+        (error as { response?: { data?: { message?: string; responseMessage?: string } } })
+          ?.response?.data?.responseMessage ??
+          (error as { response?: { data?: { message?: string } } })?.response?.data
+            ?.message ??
+          "Could not escalate. Please try again."
       );
     },
   });

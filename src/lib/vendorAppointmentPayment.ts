@@ -4,7 +4,7 @@ import type {
   VendorAppointmentStatus,
   VendorPaymentStatus,
 } from "@/types/appointments";
-import { isVendorDisputeOpen } from "@/types/appointments";
+import { isVendorDisputeOpen, isVendorDisputeEscalated } from "@/types/appointments";
 
 export function normalizeVendorPaymentStatus(status: string): VendorPaymentStatus {
   const key = status.toLowerCase();
@@ -35,6 +35,8 @@ function normalizeDisputeFromApi(
     resolver: (d.resolver as string | null) ?? null,
     resolvedBy: d.resolvedBy != null ? Number(d.resolvedBy) : null,
     resolvedAt: (d.resolvedAt as string | null) ?? null,
+    escalatedBy: d.escalatedBy != null ? String(d.escalatedBy) : null,
+    escalatedAt: (d.escalatedAt as string | null) ?? null,
     createdAt: String(d.createdAt ?? ""),
     updatedAt: String(d.updatedAt ?? ""),
   };
@@ -80,7 +82,18 @@ export function canVendorRefundDispute(appointment: VendorAppointment): boolean 
   return (
     isVendorAppointmentCompleted(appointment.status) &&
     isVendorPayoutDisputed(appointment) &&
-    appointment.paymentStatus === "paid"
+    appointment.paymentStatus === "paid" &&
+    !isVendorDisputeEscalated(appointment.dispute)
+  );
+}
+
+export function canVendorEscalateDispute(appointment: VendorAppointment): boolean {
+  return (
+    isVendorAppointmentCompleted(appointment.status) &&
+    isVendorPayoutDisputed(appointment) &&
+    !isVendorDisputeEscalated(appointment.dispute) &&
+    (appointment.dispute?.status.toLowerCase() === "pending" ||
+      appointment.dispute?.status.toLowerCase() === "open")
   );
 }
 
@@ -122,11 +135,20 @@ export function getVendorPayoutNotice(
   if (isVendorPayoutDisputed(appointment) && dispute) {
     const reason = dispute.reason.trim() || "Not specified";
 
+    if (isVendorDisputeEscalated(dispute)) {
+      return {
+        tone: "warning",
+        title: "Escalated to Afrivendors",
+        body: `Customer reason: "${reason}". Our team is reviewing this dispute. Your ${earnings} payout remains on hold until Afrivendors decides — you can still message the customer.`,
+        showRespondAction: false,
+      };
+    }
+
     if (canVendorRefundDispute(appointment)) {
       return {
         tone: "warning",
         title: "Payout on hold — customer dispute",
-        body: `The customer reported: "${reason}". Message them to resolve it together, or refund the customer if you agree.`,
+        body: `The customer reported: "${reason}". Message them to resolve it together, refund the customer if you agree, or escalate to Afrivendors.`,
         showRespondAction: false,
       };
     }
@@ -165,6 +187,9 @@ export function getVendorPayoutNotice(
 export function vendorPaymentStatusLabel(
   appointment: VendorAppointment
 ): string {
+  if (isVendorDisputeEscalated(appointment.dispute)) {
+    return "Under admin review";
+  }
   if (isVendorPayoutDisputed(appointment)) {
     return "Dispute open — payout on hold";
   }
@@ -187,6 +212,9 @@ export function vendorPaymentStatusLabel(
 export function vendorPaymentStatusClass(
   appointment: VendorAppointment
 ): string {
+  if (isVendorDisputeEscalated(appointment.dispute)) {
+    return "bg-blue-50 text-blue-800";
+  }
   if (isVendorPayoutDisputed(appointment)) {
     return "bg-amber-50 text-amber-900";
   }

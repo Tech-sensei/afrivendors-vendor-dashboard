@@ -72,6 +72,8 @@ export interface VendorAppointmentDispute {
   resolver: string | null;
   resolvedBy: number | null;
   resolvedAt: string | null;
+  escalatedBy: string | null;
+  escalatedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -82,6 +84,25 @@ export function isVendorDisputeOpen(
   if (!dispute) return false;
   const s = dispute.status.toLowerCase();
   return s !== "resolved" && s !== "closed" && s !== "cancelled";
+}
+
+export function isVendorDisputeEscalated(
+  dispute: VendorAppointmentDispute | null | undefined
+): boolean {
+  if (!dispute) return false;
+  if (dispute.escalatedBy != null || dispute.escalatedAt != null) return true;
+  const s = dispute.status.toLowerCase();
+  return s === "escalated" || dispute.resolver?.toLowerCase() === "admin";
+}
+
+/** Vendor may escalate when peer resolution failed (status still pending). */
+export function canVendorEscalateDispute(appointment: {
+  dispute?: VendorAppointmentDispute | null;
+}): boolean {
+  if (!isVendorDisputeOpen(appointment.dispute)) return false;
+  if (isVendorDisputeEscalated(appointment.dispute)) return false;
+  const s = appointment.dispute!.status.toLowerCase();
+  return s === "pending" || s === "open";
 }
 
 export interface VendorAppointment {

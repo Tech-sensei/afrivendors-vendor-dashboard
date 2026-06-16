@@ -1,11 +1,13 @@
 "use client";
 
 import React from "react";
-import { Calendar, Clock, PoundSterling, CheckCircle, XCircle, MessageSquare, Eye } from 'lucide-react';
+import { Calendar, Clock, PoundSterling, CheckCircle, XCircle, MessageSquare, Eye, AlertTriangle } from 'lucide-react';
 import { format, parseISO } from "date-fns";
 import type { VendorAppointment } from "@/types/appointments";
+import { isVendorDisputeEscalated } from "@/types/appointments";
 import { VendorAppointmentPayoutNotice } from "@/components/appointments/VendorAppointmentPayoutNotice";
 import {
+  canVendorEscalateDispute,
   canVendorRefundDispute,
   getVendorPayoutNotice,
   isVendorPayoutDisputed,
@@ -20,6 +22,7 @@ interface AppointmentCardProps {
   onMarkComplete?: (id: number) => void;
   onMessage?: (id: number) => void;
   onRefundCustomer?: (id: number) => void;
+  onEscalateDispute?: (id: number) => void;
 }
 
 const STATUS_CONFIG = {
@@ -39,13 +42,16 @@ export function AppointmentCard({
   onMarkComplete,
   onMessage,
   onRefundCustomer,
+  onEscalateDispute,
 }: AppointmentCardProps) {
   const isPending   = appointment.status === 'pending';
   const isAccepted  = appointment.status === 'accepted';
   const isCompleted = appointment.status === 'completed';
   const payoutNotice = getVendorPayoutNotice(appointment);
   const disputed = isVendorPayoutDisputed(appointment);
+  const disputeEscalated = isVendorDisputeEscalated(appointment.dispute);
   const canRefund = canVendorRefundDispute(appointment);
+  const canEscalate = canVendorEscalateDispute(appointment);
 
   const status = STATUS_CONFIG[appointment.status];
 
@@ -95,8 +101,8 @@ export function AppointmentCard({
             {status.label}
           </span>
           {isCompleted && disputed && (
-            <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 font-unageo text-[10px] font-bold uppercase tracking-wide text-amber-900">
-              Payout on hold
+            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-unageo text-[10px] font-bold uppercase tracking-wide ${disputeEscalated ? "bg-blue-100 text-blue-800" : "bg-amber-100 text-amber-900"}`}>
+              {disputeEscalated ? "Admin review" : "Payout on hold"}
             </span>
           )}
         </div>
@@ -135,15 +141,23 @@ export function AppointmentCard({
         onClick={(e) => e.stopPropagation()}
       >
         {isCompleted && canRefund && (
-          <>
-            <button
-              type="button"
-              onClick={() => onRefundCustomer?.(appointment.id)}
-              className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-4 py-2 font-unageo text-sm font-bold text-red-700 hover:bg-red-100 transition-all"
-            >
-              Refund customer
-            </button>
-          </>
+          <button
+            type="button"
+            onClick={() => onRefundCustomer?.(appointment.id)}
+            className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-4 py-2 font-unageo text-sm font-bold text-red-700 hover:bg-red-100 transition-all"
+          >
+            Refund customer
+          </button>
+        )}
+        {isCompleted && canEscalate && (
+          <button
+            type="button"
+            onClick={() => onEscalateDispute?.(appointment.id)}
+            className="flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 font-unageo text-sm font-bold text-amber-950 hover:bg-amber-100 transition-all"
+          >
+            <AlertTriangle size={16} />
+            Escalate
+          </button>
         )}
         {isPending && (
           <>

@@ -11,6 +11,7 @@ import {
   useUpdateAppointmentStatus,
   fetchVendorAppointmentById,
   useResolveDisputeRefundCustomer,
+  useEscalateVendorAppointmentDispute,
 } from "@/services/useVendorAppointments";
 import type { VendorAppointment } from "@/types/appointments";
 
@@ -25,6 +26,7 @@ import { RescheduleDrawer } from "@/components/appointments/RescheduleDrawer";
 import { MessageDrawer } from "@/components/appointments/MessageDrawer";
 import { CancelAppointmentDrawer } from "@/components/appointments/CancelAppointmentDrawer";
 import { DisputeResolutionDialog } from "@/components/appointments/DisputeResolutionDialog";
+import { EscalateDisputeDialog } from "@/components/appointments/EscalateDisputeDialog";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
 function filterAppointments(
@@ -72,7 +74,10 @@ export default function VendorAppointments() {
   const [isMarkCompleteConfirmOpen, setIsMarkCompleteConfirmOpen] = useState(false);
   const [refundAppointment, setRefundAppointment] = useState<VendorAppointment | null>(null);
   const [isRefundOpen, setIsRefundOpen] = useState(false);
+  const [escalateAppointment, setEscalateAppointment] = useState<VendorAppointment | null>(null);
+  const [isEscalateOpen, setIsEscalateOpen] = useState(false);
   const { mutate: refundCustomer, isPending: isRefunding } = useResolveDisputeRefundCustomer();
+  const { mutate: escalateDispute, isPending: isEscalating } = useEscalateVendorAppointmentDispute();
 
   const [filters, setFilters] = useState<AppointmentFiltersState>({
     search: "",
@@ -167,6 +172,18 @@ export default function VendorAppointments() {
       setRefundAppointment(appointments.find((a) => a.id === id) ?? null);
       setIsRefundOpen(true);
     });
+  };
+
+  const handleEscalateDispute = (appointment: VendorAppointment) => {
+    setEscalateAppointment(appointment);
+    setIsEscalateOpen(true);
+  };
+
+  const handleEscalateDisputeById = (id: number) => {
+    const apt =
+      appointments.find((a) => a.id === id) ??
+      (selectedAppointment?.id === id ? selectedAppointment : null);
+    if (apt) handleEscalateDispute(apt);
   };
 
   const handleConfirmAccept = () => {
@@ -295,6 +312,7 @@ export default function VendorAppointments() {
               onMessage={handleMessage}
               onViewDetails={handleViewDetails}
               onRefundCustomer={handleRefundCustomer}
+              onEscalateDispute={handleEscalateDisputeById}
             />
           ))}
         </div>
@@ -313,6 +331,11 @@ export default function VendorAppointments() {
           if (selectedAppointment) {
             setRefundAppointment(selectedAppointment);
             setIsRefundOpen(true);
+          }
+        }}
+        onEscalateDispute={() => {
+          if (selectedAppointment) {
+            handleEscalateDispute(selectedAppointment);
           }
         }}
       />
@@ -335,6 +358,21 @@ export default function VendorAppointments() {
               },
             }
           );
+        }}
+      />
+
+      <EscalateDisputeDialog
+        open={isEscalateOpen}
+        onOpenChange={setIsEscalateOpen}
+        isPending={isEscalating}
+        onConfirm={() => {
+          if (!escalateAppointment) return;
+          escalateDispute(escalateAppointment.id, {
+            onSuccess: () => {
+              setIsEscalateOpen(false);
+              setEscalateAppointment(null);
+            },
+          });
         }}
       />
 
