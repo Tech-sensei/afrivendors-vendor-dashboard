@@ -1,3 +1,5 @@
+import type { VendorApiSubscription } from "@/types/subscription";
+
 // ─── Sub-types matching /vendor/me response ───────────────────────────────────
 
 /** Nested `kyc.location` from API (snake_case fields). */
@@ -73,6 +75,7 @@ export interface VendorProfile {
   kyc: VendorKyc | null;
   openingHours: VendorOpeningHour[];
   gallery: VendorGalleryItem[];
+  subscription?: VendorApiSubscription | null;
 }
 
 // ─── Redux auth state ─────────────────────────────────────────────────────────
@@ -97,7 +100,7 @@ export interface SignInPayload {
   portal?: string;
 }
 
-/** Shape of `POST /auth/login` success body (vendor). */
+/** KYC flags on login / refresh (nested under `kyc` or legacy `vendorKyc`). */
 export interface VendorLoginKycSnapshot {
   kycSubmitted: boolean;
   canReceivePayment?: boolean;
@@ -112,7 +115,10 @@ export interface VendorLoginResponse {
   lastName: string;
   phoneNumber: string;
   createdAt: string;
+  kyc?: VendorLoginKycSnapshot | null;
+  /** @deprecated Prefer `kyc` from API */
   vendorKyc?: VendorLoginKycSnapshot | null;
+  subscription?: VendorApiSubscription | null;
   accessToken?: string;
   refreshToken?: string;
 }
@@ -122,7 +128,9 @@ export interface VendorAuthRefreshResponse {
   id: number;
   accessToken: string;
   refreshToken: string;
+  kyc?: VendorLoginKycSnapshot | null;
   vendorKyc?: VendorLoginKycSnapshot | null;
+  subscription?: VendorApiSubscription | null;
 }
 
 export type VendorRegisterAccountKind = "individual" | "business";

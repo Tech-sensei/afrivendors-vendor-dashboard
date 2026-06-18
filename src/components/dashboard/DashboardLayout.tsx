@@ -7,6 +7,7 @@ import { Header } from './Header';
 import { LogoutConfirmModal } from './LogoutConfirmModal';
 import { KycNotificationBanner } from './KycNotificationBanner';
 import { SubscriptionBanner } from '@/components/subscription/SubscriptionBanner';
+import { TrialWelcomeCard } from '@/components/subscription/TrialWelcomeCard';
 import { useAuthAPI } from '@/services/useAuthAPI';
 
 interface DashboardLayoutProps {
@@ -64,6 +65,7 @@ export default function DashboardLayout({
 
         {/* Page Content */}
         <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+          <TrialWelcomeCard />
           <SubscriptionBanner />
           <KycNotificationBanner />
           {children}

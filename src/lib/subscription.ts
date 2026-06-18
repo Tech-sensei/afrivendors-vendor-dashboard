@@ -1,12 +1,12 @@
 import {
-  SUBSCRIPTION_STORAGE_KEY,
   VENDOR_BILLING_INTERVALS,
   VENDOR_TRIAL_MONTHS,
   type VendorBillingIntervalId,
-  type VendorSubscriptionStatus,
 } from "@/data/subscriptionPlans";
 import type {
+  VendorApiSubscription,
   VendorSubscriptionRecord,
+  VendorSubscriptionStatus,
   VendorSubscriptionView,
 } from "@/types/subscription";
 
@@ -20,87 +20,113 @@ function toIsoDate(d: Date): string {
   return d.toISOString();
 }
 
-export function readStoredSubscription(): VendorSubscriptionRecord | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(SUBSCRIPTION_STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as VendorSubscriptionRecord;
-  } catch {
-    return null;
-  }
+function daysUntil(isoEnd: string): number {
+  const msLeft = new Date(isoEnd).getTime() - Date.now();
+  return Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24)));
 }
 
-export function writeStoredSubscription(record: VendorSubscriptionRecord | null) {
-  if (typeof window === "undefined") return;
-  if (!record) {
-    localStorage.removeItem(SUBSCRIPTION_STORAGE_KEY);
-    return;
-  }
-  localStorage.setItem(SUBSCRIPTION_STORAGE_KEY, JSON.stringify(record));
+export function isSkippedSubscriptionPlan(
+  subscription: VendorApiSubscription
+): boolean {
+  return subscription.plan === "skipped" || subscription.duration === "skipped";
 }
 
-export function createSubscriptionRecord(
-  intervalId: VendorBillingIntervalId,
-  from = new Date()
-): VendorSubscriptionRecord {
-  const interval = VENDOR_BILLING_INTERVALS.find((i) => i.id === intervalId)!;
-  const end = addMonths(from, interval.months);
+export function mapDurationToIntervalId(
+  duration: string
+): VendorBillingIntervalId | null {
+  if (!duration || duration === "skipped") return null;
+  const byPrice = VENDOR_BILLING_INTERVALS.find(
+    (i) => i.stripePriceId === duration
+  );
+  if (byPrice) return byPrice.id;
+  const byId = VENDOR_BILLING_INTERVALS.find((i) => i.id === duration);
+  return byId?.id ?? null;
+}
+
+/** Preview trial dates before a subscription record exists (onboarding). */
+export function buildPreviewSubscriptionView(
+  accountCreatedAt: string | undefined
+): VendorSubscriptionView {
+  const now = new Date();
+  const trialStart = accountCreatedAt ? new Date(accountCreatedAt) : now;
+  const trialEnds = addMonths(trialStart, VENDOR_TRIAL_MONTHS);
+
   return {
-    intervalId,
-    status: "active",
-    startedAt: toIsoDate(from),
-    currentPeriodEnd: toIsoDate(end),
-    cancelAtPeriodEnd: false,
+    status: "trialing",
+    isVisible: true,
+    trialStartedAt: toIsoDate(trialStart),
+    trialEndsAt: toIsoDate(trialEnds),
+    daysLeftInTrial: daysUntil(toIsoDate(trialEnds)),
+    trialMonthsTotal: VENDOR_TRIAL_MONTHS,
+    subscription: null,
+    selectedIntervalId: null,
+    isSkippedPlan: false,
+    hasSubscription: false,
+    autoRenewal: false,
   };
 }
 
-export function buildSubscriptionView(
-  accountCreatedAt: string | undefined,
-  stored: VendorSubscriptionRecord | null
+export function buildSubscriptionViewFromApi(
+  api: VendorApiSubscription | null | undefined,
+  accountCreatedAt?: string
 ): VendorSubscriptionView {
-  const now = new Date();
-  const trialStart = accountCreatedAt
-    ? new Date(accountCreatedAt)
-    : now;
-  const trialEnds = addMonths(trialStart, VENDOR_TRIAL_MONTHS);
+  if (!api) {
+    return buildPreviewSubscriptionView(accountCreatedAt);
+  }
 
-  const msLeft = trialEnds.getTime() - now.getTime();
-  const daysLeftInTrial = Math.max(
-    0,
-    Math.ceil(msLeft / (1000 * 60 * 60 * 24))
-  );
-
-  const trialActive = now < trialEnds;
-  const paidActive =
-    stored?.status === "active" &&
-    new Date(stored.currentPeriodEnd) > now;
+  const skipped = isSkippedSubscriptionPlan(api);
+  const intervalId = skipped ? null : mapDurationToIntervalId(api.duration);
+  const trialEnds = api.currentPeriodEnd;
+  const trialStart = api.currentPeriodStart;
 
   let status: VendorSubscriptionStatus;
-  if (paidActive) {
-    status = "active";
-  } else if (trialActive) {
+  if (api.trialExpired) {
+    status = "expired";
+  } else if (api.status === "trial" || (api.hasTrial && !api.stripeSubscriptionId)) {
     status = "trialing";
+  } else if (
+    api.status === "active" ||
+    api.stripeSubscriptionId
+  ) {
+    status = api.cancelAtPeriodEnd ? "cancelled" : "active";
   } else {
     status = "expired";
   }
 
-  const isVisible = status === "trialing" || status === "active";
+  const isVisible =
+    (status === "trialing" && !api.trialExpired) || status === "active";
+
+  const paidRecord: VendorSubscriptionRecord | null =
+    !skipped && intervalId
+      ? {
+          intervalId,
+          status: api.cancelAtPeriodEnd ? "cancelled" : "active",
+          startedAt: api.currentPeriodStart,
+          currentPeriodEnd: api.currentPeriodEnd,
+          cancelAtPeriodEnd: api.cancelAtPeriodEnd,
+        }
+      : null;
 
   return {
     status,
     isVisible,
-    trialStartedAt: toIsoDate(trialStart),
-    trialEndsAt: toIsoDate(trialEnds),
-    daysLeftInTrial,
+    trialStartedAt: trialStart,
+    trialEndsAt: trialEnds,
+    daysLeftInTrial: api.trialExpired ? 0 : daysUntil(trialEnds),
     trialMonthsTotal: VENDOR_TRIAL_MONTHS,
-    subscription: paidActive ? stored : null,
-    selectedIntervalId: stored?.intervalId ?? null,
+    subscription: paidRecord,
+    selectedIntervalId: intervalId,
+    isSkippedPlan: skipped,
+    hasSubscription: true,
+    autoRenewal: api.autoRenewal,
   };
 }
 
-export function formatSubscriptionDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-GB", {
+export function formatSubscriptionDate(iso: string | undefined): string {
+  if (!iso) return "—";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("en-GB", {
     day: "numeric",
     month: "long",
     year: "numeric",

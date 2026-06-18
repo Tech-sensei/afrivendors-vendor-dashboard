@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import imgHeroImage from "../../../../public/assets/images/signInHeroImg.png";
 import http from "@/lib/http";
 import { clearPostKycRedirect, consumePostKycRedirect } from "@/lib/postKycRedirect";
+import { needsSubscriptionOnboarding } from "@/lib/subscriptionOnboarding";
+import { useAppSelector } from "@/store/hooks";
 
 function pickAccountLink(body: unknown): string | null {
   if (!body || typeof body !== "object") return null;
@@ -23,11 +25,15 @@ function pickAccountLink(body: unknown): string | null {
 
 export default function KycVerificationIntroPage() {
   const router = useRouter();
+  const subscription = useAppSelector((s) => s.auth.profile?.subscription);
   const [isStarting, setIsStarting] = useState(false);
 
   const handleSkip = () => {
-    const next = consumePostKycRedirect();
-    router.replace(next ?? "/");
+    if (needsSubscriptionOnboarding(subscription)) {
+      router.replace("/onboarding/subscription");
+      return;
+    }
+    router.replace(consumePostKycRedirect() ?? "/");
   };
 
   const handleStart = async () => {

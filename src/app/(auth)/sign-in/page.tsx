@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { signInSchema } from '@/lib/validations/authValidationSchema';
 import { useAuthAPI } from '@/services/useAuthAPI';
 import { savePostKycRedirect } from '@/lib/postKycRedirect';
+import { resolvePostAuthPath } from '@/lib/vendorAuthRouting';
 
 /** `?redirect=` from auth proxy when user was sent here from a protected route (internal paths only). */
 function getSafeRedirectPath(): string | null {
@@ -52,13 +53,12 @@ export default function SignInPage() {
         if (!validateForm()) return;
         try {
             const session = await signInAsync({ email: formData.email, password: formData.password });
-            const kycDone = session?.vendorKyc?.kycSubmitted === true;
-            if (!kycDone) {
-                savePostKycRedirect(getSafeRedirectPath());
-                router.replace('/kyc-verification');
-                return;
+            const redirectPath = getSafeRedirectPath();
+            const nextPath = resolvePostAuthPath(session, redirectPath);
+            if (nextPath === '/kyc-verification' || nextPath === '/onboarding/subscription') {
+                savePostKycRedirect(redirectPath);
             }
-            router.replace(getSafeRedirectPath() ?? '/');
+            router.replace(nextPath);
         } catch {
             // error toast handled inside useAuthAPI
         }

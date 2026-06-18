@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
+import { needsSubscriptionOnboarding } from "@/lib/subscriptionOnboarding";
+import { useAppDispatch } from "@/store/hooks";
+import { fetchUserProfile } from "@/store/authSlice";
 
 function launchConfetti() {
   void import("canvas-confetti").then(({ default: confetti }) => {
@@ -39,14 +42,34 @@ function launchConfetti() {
 
 export default function StripeCompletePage() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
+  const [redirectTarget, setRedirectTarget] = useState<"dashboard" | "subscription">(
+    "dashboard"
+  );
 
   useEffect(() => {
     launchConfetti();
-    const timer = setTimeout(() => {
-      router.replace("/");
-    }, 4000);
-    return () => clearTimeout(timer);
-  }, [router]);
+
+    const run = async () => {
+      let needsOnboarding = false;
+      try {
+        const profile = await dispatch(fetchUserProfile()).unwrap();
+        needsOnboarding = needsSubscriptionOnboarding(profile.subscription);
+      } catch {
+        needsOnboarding = false;
+      }
+
+      setRedirectTarget(needsOnboarding ? "subscription" : "dashboard");
+
+      setTimeout(() => {
+        router.replace(
+          needsOnboarding ? "/onboarding/subscription" : "/"
+        );
+      }, 4000);
+    };
+
+    void run();
+  }, [dispatch, router]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-secondary-800 px-4">
@@ -56,7 +79,11 @@ export default function StripeCompletePage() {
         </div>
         <h1 className="font-unbounded text-2xl font-semibold text-secondary-000">Congratulations!</h1>
         <p className="mt-2 font-unageo text-sm text-accent-70">
-          Your Stripe verification is complete. Redirecting you to the dashboard...
+          Setup complete. Redirecting you{" "}
+          {redirectTarget === "subscription"
+            ? "to finish your account setup"
+            : "to the dashboard"}
+          …
         </p>
       </div>
     </div>

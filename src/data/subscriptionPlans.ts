@@ -21,6 +21,8 @@ export interface VendorBillingInterval {
   perMonthLabel: string;
   saveLabel?: string;
   popular?: boolean;
+  /** Stripe Price ID for `POST /subscription/create-subscription` (`duration`). */
+  stripePriceId?: string;
 }
 
 export const VENDOR_BILLING_INTERVALS: VendorBillingInterval[] = [
@@ -31,6 +33,7 @@ export const VENDOR_BILLING_INTERVALS: VendorBillingInterval[] = [
     price: 29,
     priceLabel: "£29",
     perMonthLabel: "£29/mo",
+    stripePriceId: "price_1TcsUXDerFCGYUKF7atmHrl4",
   },
   {
     id: "quarterly",
@@ -41,6 +44,7 @@ export const VENDOR_BILLING_INTERVALS: VendorBillingInterval[] = [
     perMonthLabel: "~£26/mo",
     saveLabel: "Save 9%",
     popular: true,
+    stripePriceId: "price_1TcsWkDerFCGYUKFe1PHbnTd",
   },
   {
     id: "biannual",
@@ -50,6 +54,7 @@ export const VENDOR_BILLING_INTERVALS: VendorBillingInterval[] = [
     priceLabel: "£149",
     perMonthLabel: "~£25/mo",
     saveLabel: "Save 14%",
+    stripePriceId: "price_1TcsWkDerFCGYUKF3v3hTxHT",
   },
   {
     id: "yearly",
@@ -59,8 +64,17 @@ export const VENDOR_BILLING_INTERVALS: VendorBillingInterval[] = [
     priceLabel: "£249",
     perMonthLabel: "~£21/mo",
     saveLabel: "Save 28%",
+    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_YEARLY,
   },
 ];
+
+export function getStripePriceIdForInterval(
+  intervalId: VendorBillingIntervalId
+): string | null {
+  const interval = VENDOR_BILLING_INTERVALS.find((i) => i.id === intervalId);
+  const id = interval?.stripePriceId?.trim();
+  return id || null;
+}
 
 export const VENDOR_SUBSCRIPTION_FEATURES = [
   "Marketplace visibility in your category",

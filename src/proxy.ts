@@ -16,6 +16,7 @@ const protectedRoutes = [
   '/settings',
   '/help-support',
   '/kyc-verification',
+  '/onboarding/subscription',
 ];
 
 const authRoutes = [
@@ -67,6 +68,7 @@ export const config = {
     '/settings/:path*',
     '/help-support/:path*',
     '/kyc-verification',
+    '/onboarding/subscription',
     '/sign-in',
     '/sign-up',
     '/sign-up/celebration',

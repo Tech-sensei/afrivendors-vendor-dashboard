@@ -2,37 +2,75 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Check, Eye, EyeOff } from "lucide-react";
+import { Check, Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useVendorSubscription } from "@/hooks/useVendorSubscription";
+import {
+  useCreateVendorSubscription,
+} from "@/services/useVendorSubscriptionAPI";
 import {
   VENDOR_SUBSCRIPTION_FEATURES,
   VENDOR_TRIAL_MONTHS,
   type VendorBillingIntervalId,
 } from "@/data/subscriptionPlans";
 import { formatSubscriptionDate } from "@/lib/subscription";
-import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { SubscriptionConfigError } from "@/lib/vendorSubscriptionApi";
+import { redirectToStripeCheckout } from "@/lib/subscriptionOnboarding";
+import { SubscriptionHistoryTimeline } from "@/components/subscription/SubscriptionHistoryTimeline";
+import {
+  canManageSubscriptionBilling,
+  SubscriptionAutoRenewalToggle,
+} from "@/components/subscription/SubscriptionAutoRenewalToggle";
+
+function getErrorMessage(err: unknown): string {
+  if (err instanceof SubscriptionConfigError) return err.message;
+  const ax = err as {
+    response?: { data?: { message?: string; responseMessage?: string } };
+  };
+  return (
+    ax?.response?.data?.responseMessage ||
+    ax?.response?.data?.message ||
+    "Something went wrong. Please try again."
+  );
+}
 
 export default function SubscriptionPage() {
-  const { hydrated, view, intervals, subscribe, cancelAtPeriodEnd } =
-    useVendorSubscription();
+  const { hydrated, view, intervals, apiSubscription } = useVendorSubscription();
+  const createSubscription = useCreateVendorSubscription();
   const [selectedInterval, setSelectedInterval] =
     useState<VendorBillingIntervalId>("quarterly");
-  const [cancelOpen, setCancelOpen] = useState(false);
 
-  const handleSubscribe = () => {
-    const record = subscribe(selectedInterval);
-    toast.success(
-      `Subscribed (${selectedInterval}). Demo: visible until ${formatSubscriptionDate(record.currentPeriodEnd)}.`
-    );
+  const hasStripeBilling = Boolean(
+    apiSubscription?.stripeCustomerId || apiSubscription?.stripeSubscriptionId
+  );
+  const showBillingManagement = canManageSubscriptionBilling(
+    view,
+    hasStripeBilling
+  );
+
+  const handleSubscribe = async () => {
+    try {
+      const { checkoutUrl } = await createSubscription.mutateAsync({
+        mode: "checkout",
+        intervalId: selectedInterval,
+      });
+      if (!checkoutUrl) {
+        toast.error("Invalid response", {
+          description: "No checkout URL was returned from the server.",
+        });
+        return;
+      }
+      redirectToStripeCheckout(checkoutUrl);
+    } catch (err) {
+      toast.error("Could not start checkout", { description: getErrorMessage(err) });
+    }
   };
 
-  const handleCancel = () => {
-    cancelAtPeriodEnd();
-    setCancelOpen(false);
-    toast.message("Subscription will end at the close of the current period.");
-  };
+  const isSubmitting = createSubscription.isPending;
+  const showPlanPicker =
+    (view.status === "trialing" && view.isSkippedPlan) ||
+    view.status === "expired";
 
   if (!hydrated) {
     return (
@@ -44,7 +82,7 @@ export default function SubscriptionPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl pb-12">
+    <div className="mx-auto max-w-7xl pb-12">
       <div className="mb-8">
         <h1 className="font-unbounded text-[28px] font-semibold leading-8 text-secondary-200">
           Subscription
@@ -123,9 +161,11 @@ export default function SubscriptionPage() {
             </>
           )}
         </dl>
+
+        {showBillingManagement && <SubscriptionAutoRenewalToggle view={view} />}
       </div>
 
-      {(view.status === "trialing" || view.status === "expired") && (
+      {showPlanPicker && (
         <section className="mb-8">
           <h2 className="mb-2 font-unbounded text-lg font-semibold text-secondary-000">
             {view.status === "expired"
@@ -133,9 +173,9 @@ export default function SubscriptionPage() {
               : "Choose billing before trial ends"}
           </h2>
           <p className="mb-6 text-sm text-accent-80">
-            Pick how often you want to be billed. You will not be charged during
-            your free trial — payment starts when the trial ends (demo: instant
-            checkout simulation).
+            {view.status === "expired"
+              ? "Your free trial has ended. Choose a plan and complete checkout to restore visibility."
+              : `Pick how often you want to be billed. You won't be charged until ${formatSubscriptionDate(view.trialEndsAt)}.`}
           </p>
 
           <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -174,33 +214,17 @@ export default function SubscriptionPage() {
 
           <button
             type="button"
-            onClick={handleSubscribe}
-            className="h-11 w-full rounded-[18px] bg-primary-100 font-semibold text-white hover:bg-primary-100/90 sm:w-auto sm:px-8"
+            onClick={() => void handleSubscribe()}
+            disabled={isSubmitting}
+            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-[18px] bg-primary-100 font-semibold text-white hover:bg-primary-100/90 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:px-8"
           >
-            {view.status === "expired"
-              ? "Subscribe & go live"
-              : "Select plan (demo)"}
+            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {isSubmitting
+              ? "Opening Stripe…"
+              : view.status === "expired"
+                ? "Subscribe & go live"
+                : "Select plan & add card"}
           </button>
-        </section>
-      )}
-
-      {view.status === "active" && view.subscription && (
-        <section className="mb-8 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-6">
-          <p className="font-semibold text-emerald-900">
-            You have an active subscription
-          </p>
-          <p className="mt-1 text-sm text-emerald-800">
-            Your profile is visible. Manage renewal or cancel at period end below.
-          </p>
-          {!view.subscription.cancelAtPeriodEnd && (
-            <button
-              type="button"
-              onClick={() => setCancelOpen(true)}
-              className="mt-4 text-sm font-semibold text-red-700 underline"
-            >
-              Cancel at period end
-            </button>
-          )}
         </section>
       )}
 
@@ -230,15 +254,12 @@ export default function SubscriptionPage() {
         </p>
       </section>
 
-      <ConfirmModal
-        open={cancelOpen}
-        onOpenChange={setCancelOpen}
-        onConfirm={handleCancel}
-        title="Cancel subscription?"
-        description="Your listing stays visible until the end of the current billing period. After that, you will need to subscribe again to appear in client search."
-        confirmText="Cancel at period end"
-        cancelText="Keep subscription"
-      />
+      {view.hasSubscription && (
+        <div className="mt-8">
+          <SubscriptionHistoryTimeline />
+        </div>
+      )}
+
     </div>
   );
 }

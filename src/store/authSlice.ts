@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit";
 import http, { redirectToSignIn } from "@/lib/http";
 import type { AuthState, VendorLoginKycSnapshot, VendorProfile } from "@/types/auth";
+import type { VendorApiSubscription } from "@/types/subscription";
 
 const initialState: AuthState = {
   profile: null,
@@ -41,12 +42,22 @@ const authSlice = createSlice({
       state.profile = action.payload;
       state.isAuthenticated = true;
     },
-    /** After `/auth/refresh`, merge KYC flags without a full `/vendor/me` round-trip. */
+    /** After `/auth/refresh`, merge KYC + subscription without a full `/vendor/me` round-trip. */
     mergeVendorKycFromRefresh: (
       state,
-      action: PayloadAction<{ vendorKyc?: VendorLoginKycSnapshot | null }>
+      action: PayloadAction<{
+        vendorKyc?: VendorLoginKycSnapshot | null;
+        kyc?: VendorLoginKycSnapshot | null;
+        subscription?: VendorApiSubscription | null;
+      }>
     ) => {
-      const k = action.payload.vendorKyc;
+      const k = action.payload.kyc ?? action.payload.vendorKyc;
+      const { subscription } = action.payload;
+
+      if (subscription !== undefined && state.profile) {
+        state.profile.subscription = subscription;
+      }
+
       if (!k || !state.profile) return;
       state.profile.vendor.kycSubmitted = k.kycSubmitted;
       if (k.canReceivePayment !== undefined) {

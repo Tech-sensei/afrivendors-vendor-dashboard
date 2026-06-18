@@ -57,7 +57,13 @@ async function refreshAccessToken(): Promise<string | null> {
     refreshPromise = (async () => {
       const body = await performTokenRefresh();
       if (!body?.accessToken) return null;
-      store.dispatch(mergeVendorKycFromRefresh({ vendorKyc: body.vendorKyc }));
+      store.dispatch(
+        mergeVendorKycFromRefresh({
+          kyc: body.kyc,
+          vendorKyc: body.vendorKyc,
+          subscription: body.subscription,
+        })
+      );
       return body.accessToken;
     })().finally(() => {
       refreshPromise = null;

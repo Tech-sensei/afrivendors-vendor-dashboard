@@ -51,7 +51,13 @@ export default function AuthInitializer({ children }: { children: React.ReactNod
           redirectToSignIn();
           return;
         }
-        dispatch(mergeVendorKycFromRefresh({ vendorKyc: body.vendorKyc }));
+        dispatch(
+          mergeVendorKycFromRefresh({
+            kyc: body.kyc,
+            vendorKyc: body.vendorKyc,
+            subscription: body.subscription,
+          })
+        );
         scheduleProactiveRefresh(body.accessToken);
       }, delay);
     };
@@ -82,7 +88,13 @@ export default function AuthInitializer({ children }: { children: React.ReactNod
           redirectToSignIn();
           return;
         }
-        dispatch(mergeVendorKycFromRefresh({ vendorKyc: body.vendorKyc }));
+        dispatch(
+          mergeVendorKycFromRefresh({
+            kyc: body.kyc,
+            vendorKyc: body.vendorKyc,
+            subscription: body.subscription,
+          })
+        );
         dispatch(fetchUserProfile());
         scheduleProactiveRefresh(body.accessToken);
         return;

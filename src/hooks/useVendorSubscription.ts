@@ -1,55 +1,38 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAppSelector } from "@/store/hooks";
+import { VENDOR_BILLING_INTERVALS } from "@/data/subscriptionPlans";
+import { buildSubscriptionViewFromApi } from "@/lib/subscription";
 import {
-  VENDOR_BILLING_INTERVALS,
-  type VendorBillingIntervalId,
-} from "@/data/subscriptionPlans";
-import {
-  buildSubscriptionView,
-  createSubscriptionRecord,
-  readStoredSubscription,
-  writeStoredSubscription,
-} from "@/lib/subscription";
+  fetchVendorSubscription,
+  VENDOR_SUBSCRIPTION_HISTORY_QUERY_KEY,
+  VENDOR_SUBSCRIPTION_QUERY_KEY,
+} from "@/services/vendorSubscriptionQueries";
 
 export function useVendorSubscription() {
   const profile = useAppSelector((s) => s.auth.profile);
+  const isLoadingUser = useAppSelector((s) => s.auth.isLoadingUser);
   const createdAt = profile?.vendor?.createdAt;
+  const profileSubscription = profile?.subscription;
 
-  const [stored, setStored] = useState<ReturnType<typeof readStoredSubscription>>(
-    null
-  );
-  const [hydrated, setHydrated] = useState(false);
+  const { data: fetchedSubscription, isLoading: isLoadingSubscription } =
+    useQuery({
+      queryKey: VENDOR_SUBSCRIPTION_QUERY_KEY,
+      queryFn: fetchVendorSubscription,
+      enabled: Boolean(profile),
+      staleTime: 60_000,
+    });
 
-  useEffect(() => {
-    setStored(readStoredSubscription());
-    setHydrated(true);
-  }, []);
+  const apiSubscription = fetchedSubscription ?? profileSubscription ?? null;
 
   const view = useMemo(
-    () => buildSubscriptionView(createdAt, stored),
-    [createdAt, stored]
+    () => buildSubscriptionViewFromApi(apiSubscription, createdAt),
+    [apiSubscription, createdAt]
   );
 
-  const subscribe = useCallback((intervalId: VendorBillingIntervalId) => {
-    const record = createSubscriptionRecord(intervalId);
-    writeStoredSubscription(record);
-    setStored(record);
-    return record;
-  }, []);
-
-  const cancelAtPeriodEnd = useCallback(() => {
-    if (!stored) return;
-    const next = { ...stored, cancelAtPeriodEnd: true };
-    writeStoredSubscription(next);
-    setStored(next);
-  }, [stored]);
-
-  const clearSubscription = useCallback(() => {
-    writeStoredSubscription(null);
-    setStored(null);
-  }, []);
+  const hydrated = Boolean(profile) && !isLoadingUser && !isLoadingSubscription;
 
   const selectedInterval = VENDOR_BILLING_INTERVALS.find(
     (i) => i.id === view.selectedIntervalId
@@ -58,10 +41,18 @@ export function useVendorSubscription() {
   return {
     hydrated,
     view,
+    apiSubscription,
     selectedInterval,
-    subscribe,
-    cancelAtPeriodEnd,
-    clearSubscription,
     intervals: VENDOR_BILLING_INTERVALS,
+  };
+}
+
+export function useInvalidateVendorSubscription() {
+  const queryClient = useQueryClient();
+  return () => {
+    void queryClient.invalidateQueries({ queryKey: VENDOR_SUBSCRIPTION_QUERY_KEY });
+    void queryClient.invalidateQueries({
+      queryKey: VENDOR_SUBSCRIPTION_HISTORY_QUERY_KEY,
+    });
   };
 }

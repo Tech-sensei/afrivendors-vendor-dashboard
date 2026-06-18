@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { PartyPopper } from "lucide-react";
+import { TrialPerksRow } from "@/components/onboarding/TrialPerksRow";
 import imgHeroImage from "../../../../../public/assets/images/signUpHeroImg.png";
 
 function launchConfetti() {
@@ -69,6 +70,7 @@ export default function SignUpCelebrationPage() {
             {email ? (
               <p className="mt-2 text-sm font-semibold text-secondary-000">{email}</p>
             ) : null}
+            <TrialPerksRow />
             <Link
               href={verifyHref}
               className="mt-10 inline-flex h-14 w-full max-w-sm items-center justify-center rounded-xl bg-primary-100 text-base font-semibold text-white transition-opacity duration-200 hover:opacity-90"
