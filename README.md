@@ -214,7 +214,7 @@ This project is actively under development. Current focus areas:
 
 ## 📞 Support
 
-For support and questions, please contact [support information to be added]
+For support and questions, please contact [support information to be added].
 
 ---
 
