@@ -16,6 +16,11 @@ const ForgotPasswordPage = () => {
     const [emailError, setEmailError] = useState('');
     const [isSuccess, setIsSuccess] = useState(false);
 
+    const handleEmailChange = (value: string) => {
+        setEmail(value);
+        if (emailError) setEmailError('');
+    };
+
     const validateEmail = () => {
         const result = forgotPasswordSchema.safeParse({ email });
         if (!result.success) {
@@ -77,10 +82,7 @@ const ForgotPasswordPage = () => {
                                             type="email"
                                             placeholder="e.g example@email.com"
                                             value={email}
-                                            onChange={(e) => {
-                                                setEmail(e.target.value);
-                                                if (emailError) setEmailError('');
-                                            }}
+                                            onChange={(e) => handleEmailChange(e.target.value)}
                                             onFocus={() => setEmailFocused(true)}
                                             onBlur={() => setEmailFocused(false)}
                                             onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
