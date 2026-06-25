@@ -32,7 +32,7 @@ function normalizeDisputeFromApi(
     reason: d.reason,
     resolution: (d.resolution as string | null) ?? null,
     status: String(d.status ?? "pending"),
-    resolver: (d.resolver as string | null) ?? null,
+    resolver: d.resolver != null ? String(d.resolver) : null,
     resolvedBy: d.resolvedBy != null ? Number(d.resolvedBy) : null,
     resolvedAt: (d.resolvedAt as string | null) ?? null,
     escalatedBy: d.escalatedBy != null ? String(d.escalatedBy) : null,

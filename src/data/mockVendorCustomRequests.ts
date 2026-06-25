@@ -25,11 +25,11 @@ export const mockVendorCustomRequests: VendorCustomRequest[] = [
     myQuote: {
       id: "vq-3a",
       lineItems: [
-        { description: "Deep clean (3 rooms)", amount: 95 },
-        { description: "Eco supplies", amount: 20 },
+        { item: "Deep clean (3 rooms)", price: 95 },
+        { item: "Eco supplies", price: 20 },
       ],
       totalAmount: 115,
-      message:
+      note:
         "We use plant-based products throughout. Includes carpet, windows, and desk surfaces.",
       validUntil: "2026-06-05",
       sentAt: "May 15, 2026",
@@ -121,7 +121,7 @@ export const mockVendorCustomRequests: VendorCustomRequest[] = [
     competitorQuoteCount: 2,
     myQuote: {
       id: "vq-11b",
-      lineItems: [{ description: "Turnover clean", amount: 68 }],
+      lineItems: [{ item: "Turnover clean", price: 68 }],
       totalAmount: 68,
       validUntil: "2026-05-18",
       sentAt: "May 9, 2026",
@@ -155,11 +155,11 @@ export const mockVendorCustomRequests: VendorCustomRequest[] = [
     myQuote: {
       id: "vq-12a",
       lineItems: [
-        { description: "Whole-home deep clean", amount: 165 },
-        { description: "Materials & eco products", amount: 33 },
+        { item: "Whole-home deep clean", price: 165 },
+        { item: "Materials & eco products", price: 33 },
       ],
       totalAmount: 198,
-      message: "Team of two, estimated 6 hours.",
+      note: "Team of two, estimated 6 hours.",
       validUntil: "2026-05-18",
       sentAt: "May 2, 2026",
       status: "accepted",
@@ -190,7 +190,7 @@ export const mockVendorCustomRequests: VendorCustomRequest[] = [
     paymentMethod: "online",
     myQuote: {
       id: "vq-13a",
-      lineItems: [{ description: "Carpet shampoo package", amount: 79 }],
+      lineItems: [{ item: "Carpet shampoo package", price: 79 }],
       totalAmount: 79,
       validUntil: "2026-04-10",
       sentAt: "April 6, 2026",
@@ -222,8 +222,8 @@ export const mockVendorCustomRequests: VendorCustomRequest[] = [
     myQuote: {
       id: "vq-14a",
       lineItems: [
-        { description: "Kitchen degrease service", amount: 110 },
-        { description: "Waste disposal", amount: 15 },
+        { item: "Kitchen degrease service", price: 110 },
+        { item: "Waste disposal", price: 15 },
       ],
       totalAmount: 125,
       validUntil: "2026-02-25",

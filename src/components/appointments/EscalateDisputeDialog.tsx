@@ -11,6 +11,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
+/** Above detail drawers (`z-[1000]`) and nested drawers (`z-[1002]`). */
+const MODAL_OVERLAY_Z = "z-[1100]";
+const MODAL_CONTENT_Z = "z-[1101]";
+
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -26,7 +30,10 @@ export function EscalateDisputeDialog({
 }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md rounded-2xl border-accent-20 sm:max-w-lg">
+      <DialogContent
+        overlayClassName={MODAL_OVERLAY_Z}
+        className={`${MODAL_CONTENT_Z} max-w-md rounded-2xl border-accent-20 sm:max-w-lg`}
+      >
         <DialogHeader>
           <DialogTitle className="font-unbounded text-lg text-secondary-000">
             Escalate to Afrivendors

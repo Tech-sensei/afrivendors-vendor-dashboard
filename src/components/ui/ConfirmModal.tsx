@@ -45,7 +45,10 @@ export function ConfirmModal({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="bg-white rounded-3xl border border-accent-20 max-w-[calc(100%-2rem)] sm:max-w-[440px] p-4 sm:p-8">
+            <DialogContent
+                overlayClassName="z-[1100]"
+                className="z-[1101] bg-white rounded-3xl border border-accent-20 max-w-[calc(100%-2rem)] sm:max-w-[440px] p-4 sm:p-8"
+            >
                 <DialogHeader>
                     {Icon && (
                         <div className={`mx-auto mb-4 flex items-center justify-center size-14 rounded-full ${iconBg}`}>

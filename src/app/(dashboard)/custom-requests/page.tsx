@@ -1,44 +1,42 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { mockVendorCustomRequests } from "@/data/mockVendorCustomRequests";
-import {
-  VENDOR_CUSTOM_REQUEST_TABS,
-  countVendorRequestsByTab,
-  filterVendorRequestsByTab,
-} from "@/lib/vendorCustomRequestFilters";
+import { VENDOR_CUSTOM_REQUEST_TABS } from "@/lib/vendorCustomRequestFilters";
 import { formatMoney } from "@/lib/vendorCustomRequestUi";
 import type {
   VendorCustomRequest,
   VendorCustomRequestTabId,
-  VendorQuote,
-  VendorQuoteLineItem,
 } from "@/types/vendorCustomRequests";
+import type { VendorSendQuotePayload } from "@/lib/validations/vendorCustomRequestSchemas";
 import { VendorCustomRequestListCard } from "@/components/custom-requests/VendorCustomRequestListCard";
 import { VendorCustomRequestEmptyState } from "@/components/custom-requests/VendorCustomRequestEmptyState";
 import { VendorCustomRequestDetailDrawer } from "@/components/custom-requests/VendorCustomRequestDetailDrawer";
 import { VendorSendQuoteDrawer } from "@/components/custom-requests/VendorSendQuoteDrawer";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
-
-function todayLabel() {
-  return new Date().toLocaleDateString("en-GB", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
+import {
+  getVendorCustomRequestErrorMessage,
+  useCompleteVendorCustomRequest,
+  useSendVendorCustomRequestQuote,
+  useVendorCustomRequestDetail,
+  useVendorCustomRequests,
+  useVendorCustomRequestTabCounts,
+  VENDOR_CUSTOM_REQUEST_DETAIL_KEY,
+  VENDOR_CUSTOM_REQUEST_COUNTS_KEY,
+  VENDOR_CUSTOM_REQUESTS_KEY,
+  useVendorEscalateCustomRequestDispute,
+  useVendorRefundCustomRequestDispute,
+} from "@/services/useVendorCustomRequests";
+import { DisputeResolutionDialog } from "@/components/appointments/DisputeResolutionDialog";
+import { EscalateDisputeDialog } from "@/components/appointments/EscalateDisputeDialog";
 
 export default function CustomRequestsPage() {
-  const [requests, setRequests] = useState<VendorCustomRequest[]>(
-    mockVendorCustomRequests
-  );
   const [activeTab, setActiveTab] =
     useState<VendorCustomRequestTabId>("incoming");
   const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState<VendorCustomRequest | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [quoteEditMode, setQuoteEditMode] = useState(false);
@@ -46,144 +44,114 @@ export default function CustomRequestsPage() {
   const [completeTargetId, setCompleteTargetId] = useState<string | null>(
     null
   );
+  const [refundTargetId, setRefundTargetId] = useState<string | null>(null);
+  const [isRefundOpen, setIsRefundOpen] = useState(false);
+  const [escalateTargetId, setEscalateTargetId] = useState<string | null>(null);
+  const [isEscalateOpen, setIsEscalateOpen] = useState(false);
 
-  const filteredByTab = useMemo(
-    () => filterVendorRequestsByTab(requests, activeTab),
-    [requests, activeTab]
+  const { data: requests = [], isLoading } = useVendorCustomRequests(activeTab);
+  const { data: tabCounts } = useVendorCustomRequestTabCounts();
+  const sendQuote = useSendVendorCustomRequestQuote();
+  const completeRequest = useCompleteVendorCustomRequest();
+  const { mutate: refundCustomer, isPending: isRefunding } =
+    useVendorRefundCustomRequestDispute();
+  const { mutate: escalateDispute, isPending: isEscalating } =
+    useVendorEscalateCustomRequestDispute();
+
+  const selectedFromList = useMemo(
+    () => requests.find((request) => request.id === selectedId) ?? null,
+    [requests, selectedId]
   );
 
-  const filteredRequests = useMemo(() => {
-    if (!search.trim()) return filteredByTab;
-    const q = search.toLowerCase();
-    return filteredByTab.filter(
-      (r) =>
-        r.title.toLowerCase().includes(q) ||
-        r.customerName.toLowerCase().includes(q) ||
-        r.orderReferenceId.toLowerCase().includes(q) ||
-        r.description.toLowerCase().includes(q)
+  const shouldFetchDetail =
+    detailOpen && selectedId != null && activeTab !== "incoming";
+
+  const { data: selectedDetail, isLoading: detailLoading } =
+    useVendorCustomRequestDetail(
+      selectedId ? Number(selectedId) : null,
+      shouldFetchDetail
     );
-  }, [filteredByTab, search]);
+
+  const selectedLive = shouldFetchDetail
+    ? selectedDetail ?? selectedFromList
+    : selectedFromList;
+
+  const filteredRequests = useMemo(() => {
+    if (!search.trim()) return requests;
+    const q = search.toLowerCase();
+    return requests.filter(
+      (request) =>
+        request.title.toLowerCase().includes(q) ||
+        request.customerName.toLowerCase().includes(q) ||
+        request.orderReferenceId.toLowerCase().includes(q) ||
+        request.description.toLowerCase().includes(q)
+    );
+  }, [requests, search]);
 
   const openDetail = (request: VendorCustomRequest) => {
-    setSelected(request);
+    setSelectedId(request.id);
     setDetailOpen(true);
   };
 
   const openSendQuote = (request: VendorCustomRequest, edit = false) => {
-    setSelected(request);
+    setSelectedId(request.id);
     setQuoteEditMode(edit);
     setDetailOpen(false);
     setQuoteOpen(true);
   };
 
-  const handleConfirmQuote = (payload: {
-    lineItems: VendorQuoteLineItem[];
-    message: string;
-    validUntil: string;
-  }) => {
-    if (!selected) return;
-    const total = payload.lineItems.reduce((s, i) => s + i.amount, 0);
-    const label = todayLabel();
-    const quote: VendorQuote = {
-      id: selected.myQuote?.id ?? `vq-${Date.now()}`,
-      lineItems: payload.lineItems,
-      totalAmount: total,
-      message: payload.message,
-      validUntil: payload.validUntil,
-      sentAt: selected.myQuote?.sentAt ?? label,
-      status: "pending",
-    };
+  const handleConfirmQuote = async (payload: VendorSendQuotePayload) => {
+    if (!selectedId) return;
+    const total = payload.breakdown.reduce((sum, row) => sum + row.price, 0);
 
-    setRequests((prev) =>
-      prev.map((r) =>
-        r.id !== selected.id
-          ? r
-          : {
-              ...r,
-              status: "quoted" as const,
-              myQuote: quote,
-              timeline: quoteEditMode
-                ? r.timeline.map((e, i) =>
-                    i === r.timeline.length - 1
-                      ? {
-                          at: label,
-                          label: `Quote updated · ${formatMoney(total)}`,
-                        }
-                      : e
-                  )
-                : [
-                    ...r.timeline,
-                    {
-                      at: label,
-                      label: `Your quote sent · ${formatMoney(total)}`,
-                    },
-                  ],
-            }
-      )
-    );
+    try {
+      await sendQuote.mutateAsync({
+        requestId: Number(selectedId),
+        payload,
+        isEdit: quoteEditMode,
+      });
 
-    toast.success(
-      quoteEditMode
-        ? "Quote updated. The client can review your new price."
-        : `Quote of ${formatMoney(total)} sent. Awaiting client decision.`
-    );
-    setQuoteOpen(false);
-    setActiveTab("quoted");
+      toast.success(
+        quoteEditMode
+          ? "Quote updated. The client can review your new price."
+          : `Quote of ${formatMoney(total)} sent. Awaiting client decision.`
+      );
+      setQuoteOpen(false);
+      setActiveTab("quoted");
+    } catch (err) {
+      toast.error("Could not send quote", {
+        description: getVendorCustomRequestErrorMessage(err),
+      });
+    }
   };
 
   const confirmPass = () => {
-    if (!passTargetId) return;
-    const label = todayLabel();
-    setRequests((prev) =>
-      prev.map((r) =>
-        r.id !== passTargetId
-          ? r
-          : {
-              ...r,
-              status: "passed" as const,
-              timeline: [
-                ...r.timeline,
-                { at: label, label: "You passed on this request" },
-              ],
-            }
-      )
-    );
-    toast.message("Request passed");
+    toast.message("Pass is not available via API yet.");
     setPassTargetId(null);
     setDetailOpen(false);
-    setActiveTab("passed");
   };
 
-  const confirmComplete = () => {
-    if (!completeTargetId) return;
-    const label = todayLabel();
-    setRequests((prev) =>
-      prev.map((r) =>
-        r.id !== completeTargetId
-          ? r
-          : {
-              ...r,
-              status: "completed" as const,
-              timeline: [
-                ...r.timeline,
-                { at: label, label: "You marked job complete" },
-              ],
-            }
-      )
-    );
-    toast.success("Job marked complete. Client will release escrow when ready.");
-    setCompleteTargetId(null);
-    setDetailOpen(false);
-    setActiveTab("completed");
-  };
+  const confirmComplete = async () => {
+    const targetId = completeTargetId;
+    if (!targetId) return;
 
-  const selectedLive =
-    selected && requests.find((r) => r.id === selected.id)
-      ? requests.find((r) => r.id === selected.id)!
-      : selected;
+    try {
+      await completeRequest.mutateAsync(Number(targetId));
+      toast.success(
+        "Job marked complete. The client will be notified to release escrow."
+      );
+      setCompleteTargetId(null);
+      setDetailOpen(false);
+      setActiveTab("completed");
+    } catch (err) {
+      toast.error("Could not mark job complete", {
+        description: getVendorCustomRequestErrorMessage(err),
+      });
+    }
+  };
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-7xl">
       <div className="mb-8">
         <h1 className="mb-2 font-unbounded text-[28px] font-semibold leading-8 text-secondary-200">
           Custom requests
@@ -197,7 +165,7 @@ export default function CustomRequestsPage() {
 
       <div className="mb-6 flex gap-2 overflow-x-auto pb-1">
         {VENDOR_CUSTOM_REQUEST_TABS.map((tab) => {
-          const count = countVendorRequestsByTab(requests, tab.id);
+          const count = tabCounts?.[tab.id] ?? 0;
           const active = activeTab === tab.id;
           return (
             <button
@@ -238,16 +206,20 @@ export default function CustomRequestsPage() {
           onChange={(e) => setSearch(e.target.value)}
           className="h-11 w-full rounded-[18px] border border-accent-20 bg-white pl-11 pr-4 text-sm outline-none focus:border-primary-100"
         />
-          </div>
+      </div>
 
-      {filteredRequests.length > 0 ? (
+      {isLoading ? (
+        <div className="flex h-48 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary-100" />
+        </div>
+      ) : filteredRequests.length > 0 ? (
         <div className="space-y-4">
           {filteredRequests.map((request) => (
             <VendorCustomRequestListCard
               key={request.id}
               request={request}
               onViewDetails={openDetail}
-              onSendQuote={(r) => openSendQuote(r, false)}
+              onSendQuote={(request) => openSendQuote(request, false)}
               onPass={(id) => setPassTargetId(id)}
               onMarkComplete={(id) => setCompleteTargetId(id)}
             />
@@ -259,8 +231,11 @@ export default function CustomRequestsPage() {
 
       <VendorCustomRequestDetailDrawer
         isOpen={detailOpen}
-        onClose={() => setDetailOpen(false)}
-        request={selectedLive}
+        onClose={() => {
+          setDetailOpen(false);
+          setSelectedId(null);
+        }}
+        request={detailLoading ? null : selectedLive}
         onSendQuote={() =>
           selectedLive && openSendQuote(selectedLive, false)
         }
@@ -269,6 +244,59 @@ export default function CustomRequestsPage() {
         onMarkComplete={() =>
           selectedLive && setCompleteTargetId(selectedLive.id)
         }
+        onRefundCustomer={() => {
+          if (!selectedLive) return;
+          setRefundTargetId(selectedLive.id);
+          setIsRefundOpen(true);
+        }}
+        onEscalateDispute={() => {
+          if (!selectedLive) return;
+          setEscalateTargetId(selectedLive.id);
+          setIsEscalateOpen(true);
+        }}
+      />
+
+      <DisputeResolutionDialog
+        open={isRefundOpen}
+        onOpenChange={setIsRefundOpen}
+        title="Refund customer & close dispute"
+        description="You agree to refund the customer and close this dispute. Add a short note about what you agreed."
+        confirmLabel="Refund customer"
+        isPending={isRefunding}
+        onConfirm={(resolution) => {
+          if (!refundTargetId) return;
+          refundCustomer(
+            {
+              type: "custom_request",
+              orderId: Number(refundTargetId),
+              resolution,
+            },
+            {
+              onSuccess: () => {
+                setIsRefundOpen(false);
+                setRefundTargetId(null);
+              },
+            }
+          );
+        }}
+      />
+
+      <EscalateDisputeDialog
+        open={isEscalateOpen}
+        onOpenChange={setIsEscalateOpen}
+        isPending={isEscalating}
+        onConfirm={() => {
+          if (!escalateTargetId) return;
+          escalateDispute(
+            { type: "custom_request", orderId: Number(escalateTargetId) },
+            {
+              onSuccess: () => {
+                setIsEscalateOpen(false);
+                setEscalateTargetId(null);
+              },
+            }
+          );
+        }}
       />
 
       <VendorSendQuoteDrawer
@@ -277,6 +305,7 @@ export default function CustomRequestsPage() {
         request={selectedLive}
         isEditMode={quoteEditMode}
         onConfirm={handleConfirmQuote}
+        isSubmitting={sendQuote.isPending}
       />
 
       <ConfirmModal
@@ -295,7 +324,9 @@ export default function CustomRequestsPage() {
         onConfirm={confirmComplete}
         title="Mark job as complete?"
         description="The client will be notified. Funds stay in escrow until they release payment."
-        confirmText="Mark complete"
+        confirmText={
+          completeRequest.isPending ? "Marking complete…" : "Mark complete"
+        }
         cancelText="Cancel"
       />
     </div>

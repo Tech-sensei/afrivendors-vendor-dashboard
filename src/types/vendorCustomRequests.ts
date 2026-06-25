@@ -1,3 +1,6 @@
+import type { VendorOrderDispute } from "@/types/dispute";
+import type { VendorCustomRequestPaymentStatus } from "@/lib/vendorCustomRequestPayment";
+
 export type VendorRequestStatus =
   | "incoming"
   | "quoted"
@@ -10,15 +13,15 @@ export type VendorRequestStatus =
 export type VendorQuoteStatus = "pending" | "accepted" | "rejected";
 
 export interface VendorQuoteLineItem {
-  description: string;
-  amount: number;
+  item: string;
+  price: number;
 }
 
 export interface VendorQuote {
   id: string;
   lineItems: VendorQuoteLineItem[];
   totalAmount: number;
-  message?: string;
+  note?: string;
   validUntil: string;
   sentAt: string;
   status: VendorQuoteStatus;
@@ -49,7 +52,9 @@ export interface VendorCustomRequest {
   /** Quotes from other vendors on the same request (when client allows multiple). */
   competitorQuoteCount?: number;
   escrowAmount?: number;
+  paymentStatus?: VendorCustomRequestPaymentStatus;
   paymentMethod?: "online" | "wallet";
+  dispute?: VendorOrderDispute | null;
   scheduledAt?: string;
   timeline: VendorRequestTimelineEvent[];
 }

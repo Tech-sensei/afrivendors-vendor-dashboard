@@ -1,10 +1,27 @@
 import type { VendorCustomRequest } from "@/types/vendorCustomRequests";
+import { isVendorCustomRequestPayoutDisputed } from "@/lib/vendorCustomRequestPayment";
+import {
+  isVendorOrderDisputeEscalated,
+  isVendorOrderDisputeOpen,
+} from "@/types/dispute";
 
 export function formatMoney(amount: number): string {
   return `£${amount.toFixed(2)}`;
 }
 
 export function getVendorRequestSummary(request: VendorCustomRequest): string {
+  if (isVendorOrderDisputeEscalated(request.dispute)) {
+    return "Under admin review";
+  }
+  if (request.paymentStatus === "refunded") {
+    return "Refunded to customer · no payout";
+  }
+  if (isVendorCustomRequestPayoutDisputed(request)) {
+    return "Dispute open — payout on hold";
+  }
+  if (request.dispute && !isVendorOrderDisputeOpen(request.dispute)) {
+    return "Dispute closed";
+  }
   switch (request.status) {
     case "incoming":
       return "Send a quote to compete for this job";

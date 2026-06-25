@@ -5,23 +5,23 @@ import { Plus, Trash2, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import { useMobile } from "@/hooks/useMobile";
-import type { VendorCustomRequest, VendorQuoteLineItem } from "@/types/vendorCustomRequests";
-import { vendorSendQuoteSchema } from "@/lib/validations/vendorCustomRequestSchemas";
+import type { VendorCustomRequest } from "@/types/vendorCustomRequests";
+import {
+  vendorSendQuoteSchema,
+  type VendorSendQuotePayload,
+} from "@/lib/validations/vendorCustomRequestSchemas";
 import { firstZodIssueMessage } from "@/lib/validations/zodHelpers";
 import { formatMoney } from "@/lib/vendorCustomRequestUi";
 
-type LineItemRow = { description: string; amount: string };
+type BreakdownRow = { item: string; price: string };
 
 type Props = {
   isOpen: boolean;
   onClose: () => void;
   request: VendorCustomRequest | null;
   isEditMode: boolean;
-  onConfirm: (payload: {
-    lineItems: VendorQuoteLineItem[];
-    message: string;
-    validUntil: string;
-  }) => void;
+  onConfirm: (payload: VendorSendQuotePayload) => void;
+  isSubmitting?: boolean;
 };
 
 const defaultValidUntil = () => {
@@ -36,61 +36,70 @@ export function VendorSendQuoteDrawer({
   request,
   isEditMode,
   onConfirm,
+  isSubmitting = false,
 }: Props) {
   const isMobile = useMobile();
-  const [lineItems, setLineItems] = useState<LineItemRow[]>([
-    { description: "", amount: "" },
+  const [breakdown, setBreakdown] = useState<BreakdownRow[]>([
+    { item: "", price: "" },
   ]);
-  const [message, setMessage] = useState("");
-  const [validUntil, setValidUntil] = useState(defaultValidUntil());
+  const [note, setNote] = useState("");
+  const [validUntil, setValidUntil] = useState("");
 
   useEffect(() => {
     if (!isOpen || !request) return;
     if (isEditMode && request.myQuote) {
-      setLineItems(
-        request.myQuote.lineItems.map((item) => ({
-          description: item.description,
-          amount: String(item.amount),
+      setBreakdown(
+        request.myQuote.lineItems.map((row) => ({
+          item: row.item,
+          price: String(row.price),
         }))
       );
-      setMessage(request.myQuote.message ?? "");
+      setNote(request.myQuote.note ?? "");
       setValidUntil(request.myQuote.validUntil);
     } else {
-      setLineItems([{ description: "", amount: "" }]);
-      setMessage("");
+      setBreakdown([{ item: "", price: "" }]);
+      setNote("");
       setValidUntil(defaultValidUntil());
     }
   }, [isOpen, request, isEditMode]);
 
   const total = useMemo(
     () =>
-      lineItems.reduce((sum, row) => {
-        const n = Number(row.amount);
+      breakdown.reduce((sum, row) => {
+        const n = Number(row.price);
         return sum + (Number.isFinite(n) ? n : 0);
       }, 0),
-    [lineItems]
+    [breakdown]
   );
 
   if (!request) return null;
 
   const handleSubmit = () => {
     const parsed = vendorSendQuoteSchema.safeParse({
-      lineItems,
-      message,
+      breakdown,
+      note,
       validUntil,
     });
     if (!parsed.success) {
       toast.error(firstZodIssueMessage(parsed.error));
       return;
     }
-    onConfirm({
-      lineItems: parsed.data.lineItems.map((row) => ({
-        description: row.description,
-        amount: Number(row.amount),
+
+    const payload: VendorSendQuotePayload = {
+      breakdown: parsed.data.breakdown.map((row) => ({
+        item: row.item,
+        price: Number(row.price),
       })),
-      message: parsed.data.message,
-      validUntil: parsed.data.validUntil,
-    });
+    };
+
+    if (parsed.data.note) {
+      payload.note = parsed.data.note;
+    }
+    if (parsed.data.validUntil) {
+      payload.validUntil = parsed.data.validUntil;
+    }
+
+    onConfirm(payload);
   };
 
   return (
@@ -149,15 +158,12 @@ export function VendorSendQuoteDrawer({
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <label className="text-sm font-semibold text-secondary-000">
-                    Quote breakdown
+                    Breakdown *
                   </label>
                   <button
                     type="button"
                     onClick={() =>
-                      setLineItems((prev) => [
-                        ...prev,
-                        { description: "", amount: "" },
-                      ])
+                      setBreakdown((prev) => [...prev, { item: "", price: "" }])
                     }
                     className="flex items-center gap-1 text-xs font-semibold text-primary-100"
                   >
@@ -166,39 +172,36 @@ export function VendorSendQuoteDrawer({
                   </button>
                 </div>
                 <div className="space-y-3">
-                  {lineItems.map((row, idx) => (
+                  {breakdown.map((row, idx) => (
                     <div key={idx} className="flex gap-2">
                       <input
                         type="text"
-                        placeholder="Description"
-                        value={row.description}
+                        placeholder="Item"
+                        value={row.item}
                         onChange={(e) => {
-                          const next = [...lineItems];
-                          next[idx] = {
-                            ...next[idx],
-                            description: e.target.value,
-                          };
-                          setLineItems(next);
+                          const next = [...breakdown];
+                          next[idx] = { ...next[idx], item: e.target.value };
+                          setBreakdown(next);
                         }}
                         className="flex-1 rounded-xl border border-accent-20 px-3 py-2.5 text-sm outline-none focus:border-primary-100"
                       />
                       <input
                         type="number"
                         step="0.01"
-                        placeholder="£"
-                        value={row.amount}
+                        placeholder="Price"
+                        value={row.price}
                         onChange={(e) => {
-                          const next = [...lineItems];
-                          next[idx] = { ...next[idx], amount: e.target.value };
-                          setLineItems(next);
+                          const next = [...breakdown];
+                          next[idx] = { ...next[idx], price: e.target.value };
+                          setBreakdown(next);
                         }}
-                        className="w-24 rounded-xl border border-accent-20 px-3 py-2.5 text-sm outline-none focus:border-primary-100"
+                        className="w-28 rounded-xl border border-accent-20 px-3 py-2.5 text-sm outline-none focus:border-primary-100"
                       />
-                      {lineItems.length > 1 && (
+                      {breakdown.length > 1 && (
                         <button
                           type="button"
                           onClick={() =>
-                            setLineItems((prev) =>
+                            setBreakdown((prev) =>
                               prev.filter((_, i) => i !== idx)
                             )
                           }
@@ -218,20 +221,20 @@ export function VendorSendQuoteDrawer({
 
               <div>
                 <label className="mb-2 block text-sm font-semibold text-secondary-000">
-                  Message to client
+                  Note
                 </label>
                 <textarea
                   rows={4}
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="What's included, availability, and why you're a good fit…"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="Includes materials and travel within Lagos."
                   className="w-full resize-y rounded-xl border border-accent-20 p-3 text-sm outline-none focus:border-primary-100"
                 />
               </div>
 
               <div>
                 <label className="mb-2 block text-sm font-semibold text-secondary-000">
-                  Quote valid until
+                  Valid until
                 </label>
                 <input
                   type="date"
@@ -240,17 +243,13 @@ export function VendorSendQuoteDrawer({
                   className="w-full rounded-xl border border-accent-20 px-3 py-2.5 text-sm outline-none focus:border-primary-100"
                 />
               </div>
-
-              <p className="rounded-xl border border-accent-20 bg-[#FAF7F5] px-3 py-2.5 text-xs text-accent-80">
-                The client compares quotes and pays when they accept one. You
-                will be notified when they choose your quote.
-              </p>
             </div>
 
             <div className="flex gap-3 border-t border-accent-20 bg-secondary-800 p-6">
               <button
                 type="button"
                 onClick={onClose}
+                disabled={isSubmitting}
                 className="h-11 flex-1 rounded-[18px] border border-accent-20 font-semibold text-accent-80"
               >
                 Cancel
@@ -258,10 +257,14 @@ export function VendorSendQuoteDrawer({
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={total <= 0}
+                disabled={total <= 0 || isSubmitting}
                 className="h-11 flex-1 rounded-[18px] bg-primary-100 font-semibold text-white hover:bg-primary-100/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isEditMode ? "Update quote" : "Send quote"}
+                {isSubmitting
+                  ? "Sending…"
+                  : isEditMode
+                    ? "Update quote"
+                    : "Send quote"}
               </button>
             </div>
           </motion.div>
