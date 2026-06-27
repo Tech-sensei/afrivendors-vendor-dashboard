@@ -15,6 +15,7 @@ import { VendorCustomRequestListCard } from "@/components/custom-requests/Vendor
 import { VendorCustomRequestEmptyState } from "@/components/custom-requests/VendorCustomRequestEmptyState";
 import { VendorCustomRequestDetailDrawer } from "@/components/custom-requests/VendorCustomRequestDetailDrawer";
 import { VendorSendQuoteDrawer } from "@/components/custom-requests/VendorSendQuoteDrawer";
+import { MessageCustomRequestDrawer } from "@/components/custom-requests/MessageCustomRequestDrawer";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import {
   getVendorCustomRequestErrorMessage,
@@ -48,6 +49,8 @@ export default function CustomRequestsPage() {
   const [isRefundOpen, setIsRefundOpen] = useState(false);
   const [escalateTargetId, setEscalateTargetId] = useState<string | null>(null);
   const [isEscalateOpen, setIsEscalateOpen] = useState(false);
+  const [isMessageOpen, setIsMessageOpen] = useState(false);
+  const [messageRequest, setMessageRequest] = useState<VendorCustomRequest | null>(null);
 
   const { data: requests = [], isLoading } = useVendorCustomRequests(activeTab);
   const { data: tabCounts } = useVendorCustomRequestTabCounts();
@@ -91,6 +94,16 @@ export default function CustomRequestsPage() {
   const openDetail = (request: VendorCustomRequest) => {
     setSelectedId(request.id);
     setDetailOpen(true);
+  };
+
+  const openMessageCustomer = (request: VendorCustomRequest) => {
+    setMessageRequest(request);
+    setIsMessageOpen(true);
+  };
+
+  const closeMessageDrawer = () => {
+    setIsMessageOpen(false);
+    setMessageRequest(null);
   };
 
   const openSendQuote = (request: VendorCustomRequest, edit = false) => {
@@ -254,6 +267,16 @@ export default function CustomRequestsPage() {
           setEscalateTargetId(selectedLive.id);
           setIsEscalateOpen(true);
         }}
+        onMessageCustomer={() => {
+          if (!selectedLive) return;
+          openMessageCustomer(selectedLive);
+        }}
+      />
+
+      <MessageCustomRequestDrawer
+        isOpen={isMessageOpen}
+        onClose={closeMessageDrawer}
+        request={messageRequest}
       />
 
       <DisputeResolutionDialog

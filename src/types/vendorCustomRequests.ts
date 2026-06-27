@@ -39,6 +39,7 @@ export interface VendorCustomRequest {
   category: string;
   description: string;
   customerName: string;
+  customerUserId: number | null;
   customerInitials: string;
   budget: number;
   location: string;

@@ -29,6 +29,11 @@ function getCategoryName(api: CustomRequestApi): string {
   return api.categoryName ?? "Category";
 }
 
+function getCustomerUserId(api: CustomRequestApi): number | null {
+  const id = api.user?.id ?? api.customer?.id;
+  return id != null ? Number(id) : null;
+}
+
 function getCustomerName(api: CustomRequestApi): string {
   const user = api.user ?? api.customer;
   if (!user) return "Client";
@@ -186,6 +191,7 @@ export function mapCustomRequestToVendorRequest(
     category: categoryName,
     description: api.description ?? "",
     customerName,
+    customerUserId: getCustomerUserId(api),
     customerInitials: customerInitials(customerName),
     budget: Number(api.budget ?? 0),
     location: api.location ?? "",

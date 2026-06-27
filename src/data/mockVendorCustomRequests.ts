@@ -13,6 +13,7 @@ export const mockVendorCustomRequests: VendorCustomRequest[] = [
     description:
       "Deep clean of home office: carpet, windows, and desks. Eco products preferred.",
     customerName: "Lisa Rice",
+    customerUserId: null,
     customerInitials: "LR",
     budget: 120,
     location: "Birmingham, UK",
@@ -48,6 +49,7 @@ export const mockVendorCustomRequests: VendorCustomRequest[] = [
     description:
       "Full end-of-tenancy clean including oven, bathrooms, and all floors. Keys available from 9am.",
     customerName: "James Okoro",
+    customerUserId: null,
     customerInitials: "JO",
     budget: 180,
     location: "Birmingham, UK",
@@ -68,6 +70,7 @@ export const mockVendorCustomRequests: VendorCustomRequest[] = [
     description:
       "Recurring weekly clean for small office (6 desks, kitchenette, WC). Looking for reliable vendor.",
     customerName: "Priya Shah",
+    customerUserId: null,
     customerInitials: "PS",
     budget: 90,
     location: "Solihull, UK",
@@ -89,6 +92,7 @@ export const mockVendorCustomRequests: VendorCustomRequest[] = [
     description:
       "Heavy dust after kitchen renovation. Need detail clean before moving back in.",
     customerName: "Emma Walsh",
+    customerUserId: null,
     customerInitials: "EW",
     budget: 150,
     location: "Coventry, UK",
@@ -110,6 +114,7 @@ export const mockVendorCustomRequests: VendorCustomRequest[] = [
     description:
       "Quick turnover between guests. Linen change, bathroom, kitchen, hoover throughout.",
     customerName: "Tom Bradley",
+    customerUserId: null,
     customerInitials: "TB",
     budget: 75,
     location: "Birmingham, UK",
@@ -141,6 +146,7 @@ export const mockVendorCustomRequests: VendorCustomRequest[] = [
     description:
       "Whole house deep clean: 4 bedrooms, 2 bathrooms, kitchen, living areas.",
     customerName: "Lisa Rice",
+    customerUserId: null,
     customerInitials: "LR",
     budget: 220,
     location: "Birmingham, UK",
@@ -178,6 +184,7 @@ export const mockVendorCustomRequests: VendorCustomRequest[] = [
     category: "Cleaning",
     description: "Professional carpet clean for large living room rug and hallway runner.",
     customerName: "David Chen",
+    customerUserId: null,
     customerInitials: "DC",
     budget: 85,
     location: "Wolverhampton, UK",
@@ -209,6 +216,7 @@ export const mockVendorCustomRequests: VendorCustomRequest[] = [
     category: "Cleaning",
     description: "Monthly degrease for small café kitchen. Hood, surfaces, floors.",
     customerName: "Maria Santos",
+    customerUserId: null,
     customerInitials: "MS",
     budget: 140,
     location: "Birmingham, UK",

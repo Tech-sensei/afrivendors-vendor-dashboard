@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, MessageSquare } from "lucide-react";
 import { X } from "lucide-react";
 import { VendorCustomRequestClientCard } from "./VendorCustomRequestClientCard";
 import { VendorCustomRequestPayoutNotice } from "./VendorCustomRequestPayoutNotice";
@@ -11,6 +11,7 @@ import { VendorCustomRequestStatusBadge } from "./VendorCustomRequestStatusBadge
 import {
   canEditQuote,
   canMarkComplete,
+  canMessageCustomer,
   canPassRequest,
   canSendQuote,
   formatMoney,
@@ -32,6 +33,7 @@ type Props = {
   onMarkComplete: () => void;
   onRefundCustomer?: () => void;
   onEscalateDispute?: () => void;
+  onMessageCustomer?: () => void;
 };
 
 export function VendorCustomRequestDetailDrawer({
@@ -44,6 +46,7 @@ export function VendorCustomRequestDetailDrawer({
   onMarkComplete,
   onRefundCustomer,
   onEscalateDispute,
+  onMessageCustomer,
 }: Props) {
   const isMobile = useMobile();
   if (!request) return null;
@@ -59,6 +62,7 @@ export function VendorCustomRequestDetailDrawer({
     canEditQuote(request) ||
     canMarkComplete(request) ||
     canPassRequest(request);
+  const showMessageCustomer = canMessageCustomer(request);
 
   return (
     <AnimatePresence>
@@ -126,6 +130,17 @@ export function VendorCustomRequestDetailDrawer({
               )}
 
               <VendorCustomRequestClientCard request={request} />
+
+              {showMessageCustomer && (
+                <button
+                  type="button"
+                  onClick={onMessageCustomer}
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-[18px] border border-accent-20 bg-white font-semibold text-secondary-000 transition-all hover:bg-accent-10 active:scale-[0.99]"
+                >
+                  <MessageSquare className="h-4 w-4 shrink-0" />
+                  Message customer
+                </button>
+              )}
 
               {request.myQuote && (
                 <section>

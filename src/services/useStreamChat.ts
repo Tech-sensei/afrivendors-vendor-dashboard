@@ -25,7 +25,8 @@ export const useCreateStreamChatChannel = () => {
   return useMutation({
     mutationFn: async (createChanneldata: {
       otherUserId: number;
-      appointmentId: number;
+      appointmentId?: number;
+      customRequestId?: number;
     }) => {
       const { data } = await http.post(
         "/messages/create-channel",

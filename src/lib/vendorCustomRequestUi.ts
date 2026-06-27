@@ -63,3 +63,10 @@ export function canPassRequest(request: VendorCustomRequest): boolean {
 export function canMarkComplete(request: VendorCustomRequest): boolean {
   return request.status === "active";
 }
+
+export function canMessageCustomer(request: VendorCustomRequest): boolean {
+  return (
+    request.customerUserId != null &&
+    !["passed", "lost"].includes(request.status)
+  );
+}
